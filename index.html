@@ -196,7 +196,7 @@
     }
     #notification {
       flex: 1; display: flex; align-items: center;
-      gap: 8px; font-size: .9rem; min-height: 1.4em;
+      gap: 8px; font-size: 1.1rem; font-weight: 700; min-height: 1.4em;
     }
     #notification.error { color: #b91c1c; }
     #notification.ready { color: #15803d; }
@@ -204,43 +204,45 @@
 
     /* Confirmation screen */
     #confirm-screen {
-      align-items: center; justify-content: center;
-      padding: 40px 24px;
+      flex-direction: column; align-items: stretch; justify-content: flex-start;
+      padding: 0; background: #e8ecf0;
     }
-    #confirm-inner {
-      max-width: 580px; width: 100%;
-      background: #fff; border-radius: 16px;
-      padding: 36px 40px;
-      box-shadow: 0 4px 20px rgba(0,0,0,.1);
-      display: flex; flex-direction: column; gap: 24px;
-      text-align: center;
+    #confirm-header {
+      flex-shrink: 0; background: #fff; border-bottom: 2px solid #d1d5db;
+      padding: 18px 32px; text-align: center;
     }
-    #confirm-inner h2 { font-size: 1.5rem; font-weight: 700; }
-    .confirm-sub { color: #555; line-height: 1.6; font-size: .97rem; }
+    #confirm-header h2 { font-size: 1.5rem; font-weight: 700; }
+    .confirm-sub { color: #555; line-height: 1.6; font-size: .97rem; margin-top: 6px; }
 
     #confirm-groups {
-      display: flex; gap: 16px;
+      flex: 1; display: flex; overflow: hidden; position: relative;
     }
+    #confirm-divider { width: 2px; background: #d1d5db; flex-shrink: 0; }
     .confirm-group {
-      flex: 1; border: 2px solid #e2e8f0;
-      border-radius: 10px; padding: 14px 16px;
-      text-align: left;
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px; padding: 24px;
     }
-    .confirm-group-title { font-weight: 700; font-size: .9rem; color: #374151; margin-bottom: 12px; }
+    .confirm-group-title {
+      font-weight: 700; font-size: 1rem; color: #9ca3af;
+      position: absolute; top: 14px; pointer-events: none;
+    }
+    .confirm-group:first-child .confirm-group-title { left: 20px; }
+    .confirm-group:last-child  .confirm-group-title { left: calc(50% + 20px); }
     .confirm-group-content {
-      display: flex; gap: 14px;
-      align-items: center; justify-content: center;
-      flex-wrap: wrap;
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
     }
-    .confirm-group-content img {
-      object-fit: contain; background: transparent; display: block;
+    .confirm-group-content img { object-fit: contain; background: transparent; display: block; }
+    .confirm-group-content .sound-icon { width: 100px; height: 100px; }
+    .confirm-group-content .sound-icon svg { width: 32px; height: 32px; }
+
+    #confirm-footer {
+      flex-shrink: 0; background: #fff; border-top: 2px solid #d1d5db;
+      padding: 12px 32px; display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
     }
-    .confirm-group-content .sound-icon { width: 80px; height: 80px; }
-    .confirm-group-content .sound-icon svg { width: 24px; height: 24px; }
-
-    #confirm-question { font-size: 1.05rem; font-weight: 600; color: #222; }
-
-    #confirm-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    #confirm-question { flex: 1; font-size: 1.1rem; font-weight: 700; color: #6b7280; }
+    #confirm-question.ready { color: #222; }
+    #confirm-buttons { display: flex; gap: 14px; flex-wrap: wrap; }
     .btn-secondary {
       padding: 12px 28px; font-size: 1rem; font-weight: 600;
       background: #fff; color: #374151;
@@ -348,23 +350,25 @@
 
   <!-- CONFIRMATION -->
   <div id="confirm-screen" class="screen">
-    <div id="confirm-inner">
+    <div id="confirm-header">
       <h2>Before you submit…</h2>
       <p class="confirm-sub">Please listen to both sounds once more and confirm you are happy with your groupings.</p>
+    </div>
 
-      <div id="confirm-groups">
-        <div class="confirm-group">
-          <div class="confirm-group-title">Group 1</div>
-          <div id="confirm-group1-content" class="confirm-group-content"></div>
-        </div>
-        <div class="confirm-group">
-          <div class="confirm-group-title">Group 2</div>
-          <div id="confirm-group2-content" class="confirm-group-content"></div>
-        </div>
+    <div id="confirm-groups">
+      <div class="confirm-group">
+        <div class="confirm-group-title">Group 1</div>
+        <div id="confirm-group1-content" class="confirm-group-content"></div>
       </div>
+      <div id="confirm-divider"></div>
+      <div class="confirm-group">
+        <div class="confirm-group-title">Group 2</div>
+        <div id="confirm-group2-content" class="confirm-group-content"></div>
+      </div>
+    </div>
 
-      <div id="confirm-question">Are you sure about your choices?</div>
-
+    <div id="confirm-footer">
+      <div id="confirm-question">Please listen to both sounds above before submitting.</div>
       <div id="confirm-buttons">
         <button class="btn-secondary" id="goback-btn">&#8592; Go back and change</button>
         <button class="btn-primary"   id="confirm-submit-btn" disabled>Yes, submit</button>
@@ -573,24 +577,18 @@
     document.querySelectorAll('.play-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
+        if (currentAudio && !currentAudio.paused) return;
         const audio = document.getElementById('audio-' + btn.dataset.audio);
         if (!audio) return;
-        if (!audio.paused) {
-          audio.pause(); audio.currentTime = 0;
-          btn.classList.remove('playing'); btn.innerHTML = '&#9654; Play';
-          currentAudio = null; return;
-        }
-        if (currentAudio && currentAudio !== audio) {
-          currentAudio.pause(); currentAudio.currentTime = 0;
-          document.querySelectorAll('.play-btn.playing').forEach(b => { b.classList.remove('playing'); b.innerHTML = '&#9654; Play'; });
-        }
         audio.play().catch(() => {});
-        btn.classList.add('playing'); btn.innerHTML = '&#9646;&#9646; Stop';
+        btn.classList.add('playing'); btn.innerHTML = '&#9654; Playing&hellip;';
         currentAudio = audio;
-        // Mark as heard on task screen
-        taskSoundsPlayed.add(btn.dataset.audio);
-        updateUI();
-        audio.onended = () => { btn.classList.remove('playing'); btn.innerHTML = '&#9654; Play'; currentAudio = null; };
+        audio.onended = () => {
+          btn.classList.remove('playing'); btn.innerHTML = '&#9654; Play';
+          currentAudio = null;
+          taskSoundsPlayed.add(btn.dataset.audio);
+          updateUI();
+        };
       });
     });
 
@@ -617,10 +615,10 @@
       const q = document.getElementById('confirm-question');
       if (!heard) {
         q.textContent = 'Please listen to both sounds above before submitting.';
-        q.style.color = '#6b7280';
+        q.classList.remove('ready');
       } else {
         q.textContent = 'Are you sure about your choices?';
-        q.style.color = '#222';
+        q.classList.add('ready');
       }
     }
 
@@ -650,20 +648,16 @@
         <button class="play-btn">&#9654; Play</button>`;
       const playBtn = icon.querySelector('.play-btn');
       playBtn.addEventListener('click', () => {
-        if (!audio.paused) {
-          audio.pause(); audio.currentTime = 0;
-          playBtn.classList.remove('playing'); playBtn.innerHTML = '&#9654; Play'; return;
-        }
-        if (currentAudio && currentAudio !== audio) {
-          currentAudio.pause(); currentAudio.currentTime = 0;
-          document.querySelectorAll('.play-btn.playing').forEach(b => { b.classList.remove('playing'); b.innerHTML = '&#9654; Play'; });
-        }
+        if (currentAudio && !currentAudio.paused) return;
         audio.play().catch(() => {});
-        playBtn.classList.add('playing'); playBtn.innerHTML = '&#9646;&#9646; Stop';
+        playBtn.classList.add('playing'); playBtn.innerHTML = '&#9654; Playing&hellip;';
         currentAudio = audio;
-        confirmSoundsPlayed.add(sndId);
-        updateConfirmBtn();
-        audio.onended = () => { playBtn.classList.remove('playing'); playBtn.innerHTML = '&#9654; Play'; currentAudio = null; };
+        audio.onended = () => {
+          playBtn.classList.remove('playing'); playBtn.innerHTML = '&#9654; Play';
+          currentAudio = null;
+          confirmSoundsPlayed.add(sndId);
+          updateConfirmBtn();
+        };
       });
       container.appendChild(icon);
     }
