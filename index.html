@@ -17,6 +17,75 @@
     .screen { display: none; height: 100%; }
     .screen.active { display: flex; flex-direction: column; }
 
+    /* ── Shared button ─────────────────────────────────────── */
+    .btn-primary {
+      padding: 14px 52px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-primary:hover    { background: #1d4ed8; }
+    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    /* ══════════════════════════════════════════════════════════
+       CALIBRATION SCREEN
+    ══════════════════════════════════════════════════════════ */
+    #calibration-screen {
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 40px 24px;
+      text-align: center;
+    }
+    #calibration-screen h1 { font-size: 1.8rem; font-weight: 700; }
+    #calibration-screen .subtitle {
+      max-width: 500px;
+      color: #555;
+      line-height: 1.65;
+      font-size: .97rem;
+    }
+
+    #card-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #calibration-card {
+      background: #fff;
+      border: 2px solid #2563eb;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      font-size: .82rem;
+      font-weight: 500;
+      letter-spacing: .04em;
+      transition: width .05s;
+      user-select: none;
+      /* height is set dynamically to maintain credit-card aspect ratio */
+    }
+
+    #calib-slider {
+      width: 340px;
+      accent-color: #2563eb;
+    }
+
+    #calib-hint {
+      font-size: .85rem;
+      color: #9ca3af;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       START SCREEN
+    ══════════════════════════════════════════════════════════ */
     #start-screen {
       align-items: center;
       justify-content: center;
@@ -39,20 +108,9 @@
     .instructions-box p { margin-bottom: 10px; }
     .instructions-box p:last-child { margin-bottom: 0; }
 
-    .btn-primary {
-      padding: 14px 52px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      background: #2563eb;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background .15s;
-    }
-    .btn-primary:hover  { background: #1d4ed8; }
-    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
-
+    /* ══════════════════════════════════════════════════════════
+       TASK SCREEN
+    ══════════════════════════════════════════════════════════ */
     #task-screen { background: #e8ecf0; }
 
     #stimulus-bar {
@@ -74,10 +132,9 @@
     }
     #stimulus-items {
       display: flex;
-      gap: 16px;
+      gap: 20px;
       flex-wrap: wrap;
       justify-content: center;
-      min-height: 120px;
       align-items: center;
       width: 100%;
     }
@@ -88,11 +145,12 @@
       pointer-events: none;
     }
 
+    /* ── Draggable items ───────────────────────────────────── */
     .item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 7px;
+      gap: 8px;
       padding: 10px 12px;
       background: #f8fafc;
       border: 2px solid #e2e8f0;
@@ -101,22 +159,19 @@
       user-select: none;
       transition: border-color .15s, box-shadow .15s, opacity .15s;
     }
-    .item:hover     { border-color: #2563eb; box-shadow: 0 4px 14px rgba(37,99,235,.18); }
-    .item.dragging  { opacity: .35; cursor: grabbing; }
-    .item-label { font-size: .76rem; font-weight: 500; color: #64748b; }
+    .item:hover    { border-color: #2563eb; box-shadow: 0 4px 14px rgba(37,99,235,.18); }
+    .item.dragging { opacity: .35; cursor: grabbing; }
+    .item-label    { font-size: .82rem; font-weight: 600; color: #64748b; }
 
     .image-item img {
-      width: 90px;
-      height: 90px;
-      object-fit: cover;
+      object-fit: contain;
       border-radius: 6px;
-      background: #e2e8f0;
+      background: #f0f2f5;
       display: block;
+      /* width & height set dynamically via JS after calibration */
     }
 
     .sound-icon {
-      width: 90px;
-      height: 90px;
       border-radius: 6px;
       background: #eff6ff;
       border: 2px solid #bfdbfe;
@@ -124,12 +179,13 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 7px;
+      gap: 10px;
+      /* width & height set dynamically via JS after calibration */
     }
-    .sound-icon svg { width: 30px; height: 30px; color: #2563eb; }
+    .sound-icon svg { color: #2563eb; }
     .play-btn {
-      padding: 4px 12px;
-      font-size: .75rem;
+      padding: 5px 14px;
+      font-size: .8rem;
       font-weight: 600;
       background: #2563eb;
       color: #fff;
@@ -138,15 +194,13 @@
       cursor: pointer;
       transition: background .15s;
       pointer-events: all;
+      white-space: nowrap;
     }
     .play-btn:hover   { background: #1d4ed8; }
     .play-btn.playing { background: #dc2626; }
 
-    #zones-container {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-    }
+    /* ── Drop zones ────────────────────────────────────────── */
+    #zones-container { flex: 1; display: flex; overflow: hidden; }
 
     .zone {
       flex: 1;
@@ -177,10 +231,10 @@
       padding: 16px;
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 14px;
       align-content: flex-start;
       transition: border-color .15s;
-      min-height: 140px;
+      min-height: 160px;
     }
     .zone.drag-over .zone-drop-area { border-color: #2563eb; }
     .zone.valid     .zone-drop-area { border-color: #16a34a; border-style: solid; }
@@ -193,6 +247,7 @@
       pointer-events: none;
     }
 
+    /* ── Bottom bar ────────────────────────────────────────── */
     #bottom-bar {
       flex-shrink: 0;
       background: #fff;
@@ -203,7 +258,6 @@
       justify-content: space-between;
       gap: 16px;
     }
-
     #notification {
       flex: 1;
       display: flex;
@@ -212,11 +266,13 @@
       font-size: .92rem;
       min-height: 1.5em;
     }
-    #notification.error  { color: #b91c1c; }
-    #notification.ready  { color: #15803d; }
-    #notification.info   { color: #6b7280; }
-    #notification-icon   { font-size: 1.1rem; }
+    #notification.error { color: #b91c1c; }
+    #notification.ready { color: #15803d; }
+    #notification.info  { color: #6b7280; }
 
+    /* ══════════════════════════════════════════════════════════
+       END SCREEN
+    ══════════════════════════════════════════════════════════ */
     #end-screen {
       align-items: center;
       justify-content: center;
@@ -225,13 +281,35 @@
       padding: 40px 24px;
     }
     #end-screen h1 { font-size: 2rem; }
-    #end-screen p  { color: #555; font-size: 1rem; }
+    #end-screen p  { color: #555; }
     #redirect-msg  { font-size: .9rem; color: #888; }
   </style>
 </head>
 <body>
 
-  <div id="start-screen" class="screen active">
+  <!-- ══════════════════════════════════════════════════════════
+       CALIBRATION SCREEN
+  ══════════════════════════════════════════════════════════ -->
+  <div id="calibration-screen" class="screen active">
+    <h1>Screen Calibration</h1>
+    <p class="subtitle">
+      To make sure everyone sees the images at the same size, please grab a credit card (or any bank card) and place it next to your screen.<br><br>
+      Use the slider to resize the rectangle below until it matches the size of your card exactly.
+    </p>
+
+    <div id="card-wrapper">
+      <div id="calibration-card">CREDIT CARD SIZE</div>
+      <input type="range" id="calib-slider" min="150" max="700" value="323">
+      <span id="calib-hint">Drag the slider until the rectangle matches your card</span>
+    </div>
+
+    <button class="btn-primary" id="calib-confirm-btn">Confirm &amp; Continue</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       START SCREEN
+  ══════════════════════════════════════════════════════════ -->
+  <div id="start-screen" class="screen">
     <h1>Matching Task</h1>
     <div class="instructions-box">
       <p>In this task you will see <strong>two images</strong> and hear <strong>two sounds</strong>.</p>
@@ -242,6 +320,9 @@
     <button class="btn-primary" id="start-btn">Start</button>
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════
+       TASK SCREEN
+  ══════════════════════════════════════════════════════════ -->
   <div id="task-screen" class="screen">
 
     <div id="stimulus-bar">
@@ -251,12 +332,12 @@
         <span id="stimulus-empty">All items placed — drag them back here to reposition.</span>
 
         <div class="item image-item" id="item-imgRFRM" draggable="true" data-type="image" data-id="imgRFRM">
-          <img src="RFRM.png" onerror="this.style.cssText='background:#dde3ea;width:90px;height:90px;display:block'; this.removeAttribute('src')" alt="RFRM">
+          <img src="RFRM.png" onerror="this.style.background='#dde3ea'" alt="RFRM">
           <span class="item-label">RFRM</span>
         </div>
 
         <div class="item image-item" id="item-imgSFSM" draggable="true" data-type="image" data-id="imgSFSM">
-          <img src="SFSM.png" onerror="this.style.cssText='background:#c7d2e0;width:90px;height:90px;display:block'; this.removeAttribute('src')" alt="SFSM">
+          <img src="SFSM.png" onerror="this.style.background='#c7d2e0'" alt="SFSM">
           <span class="item-label">SFSM</span>
         </div>
 
@@ -321,6 +402,9 @@
 
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════
+       END SCREEN
+  ══════════════════════════════════════════════════════════ -->
   <div id="end-screen" class="screen">
     <h1>Thank you!</h1>
     <p>Your response has been recorded.</p>
@@ -328,17 +412,70 @@
   </div>
 
   <script>
+    // ── Calibration ────────────────────────────────────────────────────────────
+    // Credit card: 85.6 mm wide × 54 mm tall (ISO/IEC 7810 ID-1)
+    const CARD_W_MM = 85.6;
+    const CARD_H_MM = 54.0;
+    const ASPECT    = CARD_H_MM / CARD_W_MM; // ~0.631
+
+    // Target image display size in mm
+    const IMAGE_MM  = 80;
+
+    let pxPerMm = 96 / 25.4; // fallback: assume 96 DPI
+
+    const calibCard   = document.getElementById('calibration-card');
+    const calibSlider = document.getElementById('calib-slider');
+
+    function applySlider(val) {
+      const w = parseInt(val);
+      const h = Math.round(w * ASPECT);
+      calibCard.style.width  = w + 'px';
+      calibCard.style.height = h + 'px';
+    }
+
+    applySlider(calibSlider.value);
+    calibSlider.addEventListener('input', () => applySlider(calibSlider.value));
+
+    document.getElementById('calib-confirm-btn').addEventListener('click', () => {
+      const cardWidthPx = parseInt(calibCard.style.width);
+      pxPerMm = cardWidthPx / CARD_W_MM;
+      applyStimulusSize();
+      showScreen('start-screen');
+    });
+
+    // ── Apply calibrated size to all stimuli ───────────────────────────────────
+    function applyStimulusSize() {
+      const sizePx = Math.round(IMAGE_MM * pxPerMm);
+      const svgSz  = Math.round(sizePx * 0.35);
+
+      document.querySelectorAll('.image-item img').forEach(img => {
+        img.style.width  = sizePx + 'px';
+        img.style.height = sizePx + 'px';
+      });
+      document.querySelectorAll('.sound-icon').forEach(icon => {
+        icon.style.width  = sizePx + 'px';
+        icon.style.height = sizePx + 'px';
+      });
+      document.querySelectorAll('.sound-icon svg').forEach(svg => {
+        svg.style.width  = svgSz + 'px';
+        svg.style.height = svgSz + 'px';
+      });
+    }
+
+    // ── State ──────────────────────────────────────────────────────────────────
     const locations = {
       imgRFRM: 'stimulus', imgSFSM: 'stimulus',
       soundRFRM: 'stimulus', soundSFSM: 'stimulus'
     };
     let draggedId  = null;
     let startTime  = null;
-    const params = new URLSearchParams(window.location.search);
-    const prolificPid     = params.get('PROLIFIC_PID') || 'unknown';
-    const prolificStudy   = params.get('STUDY_ID')     || 'unknown';
-    const prolificSession = params.get('SESSION_ID')   || 'unknown';
 
+    const urlParams       = new URLSearchParams(window.location.search);
+    const prolificPid     = urlParams.get('PROLIFIC_PID') || 'unknown';
+    const prolificStudy   = urlParams.get('STUDY_ID')     || 'unknown';
+    const prolificSession = urlParams.get('SESSION_ID')   || 'unknown';
+
+    // ── Screen helper ──────────────────────────────────────────────────────────
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
@@ -349,6 +486,7 @@
       showScreen('task-screen');
     });
 
+    // ── DOM refs ───────────────────────────────────────────────────────────────
     const stimulusItems = document.getElementById('stimulus-items');
     const stimulusEmpty = document.getElementById('stimulus-empty');
     const dropLeft      = document.getElementById('drop-left');
@@ -359,6 +497,7 @@
     function dropAreaForZone(zone) { return zone === 'left' ? dropLeft : dropRight; }
     function zoneElForZone(zone)   { return zone === 'left' ? zoneLeft : zoneRight; }
 
+    // ── Move item ──────────────────────────────────────────────────────────────
     function moveItem(id, toZone) {
       const fromZone = locations[id];
       if (fromZone === toZone) return;
@@ -384,6 +523,7 @@
       updateUI();
     }
 
+    // ── Drag events ────────────────────────────────────────────────────────────
     document.querySelectorAll('.item').forEach(el => {
       el.addEventListener('dragstart', e => {
         draggedId = el.dataset.id;
@@ -397,9 +537,9 @@
     });
 
     function setupDropTarget(el, zone) {
-      el.addEventListener('dragover', e => { e.preventDefault(); zoneElForZone(zone)?.classList.add('drag-over'); });
+      el.addEventListener('dragover',  e => { e.preventDefault(); zoneElForZone(zone)?.classList.add('drag-over'); });
       el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) zoneElForZone(zone)?.classList.remove('drag-over'); });
-      el.addEventListener('drop', e => { e.preventDefault(); zoneElForZone(zone)?.classList.remove('drag-over'); if (draggedId) moveItem(draggedId, zone); });
+      el.addEventListener('drop',      e => { e.preventDefault(); zoneElForZone(zone)?.classList.remove('drag-over'); if (draggedId) moveItem(draggedId, zone); });
     }
 
     setupDropTarget(zoneLeft,  'left');
@@ -407,8 +547,9 @@
 
     const stimBar = document.getElementById('stimulus-bar');
     stimBar.addEventListener('dragover', e => e.preventDefault());
-    stimBar.addEventListener('drop', e => { e.preventDefault(); if (draggedId && locations[draggedId] !== 'stimulus') moveItem(draggedId, 'stimulus'); });
+    stimBar.addEventListener('drop',     e => { e.preventDefault(); if (draggedId && locations[draggedId] !== 'stimulus') moveItem(draggedId, 'stimulus'); });
 
+    // ── UI update ──────────────────────────────────────────────────────────────
     function countIn(zone, type) {
       return Object.entries(locations).filter(([id, loc]) => loc === zone && id.startsWith(type)).length;
     }
@@ -425,7 +566,7 @@
       document.getElementById('count-right').textContent = rTotal + (rTotal === 1 ? ' item' : ' items');
 
       let error = null;
-      if (lImg > 1)      error = 'Both images are in Group 1 — move one image to Group 2.';
+      if      (lImg > 1) error = 'Both images are in Group 1 — move one image to Group 2.';
       else if (rImg > 1) error = 'Both images are in Group 2 — move one image to Group 1.';
       else if (lSnd > 1) error = 'Both sounds are in Group 1 — move one sound to Group 2.';
       else if (rSnd > 1) error = 'Both sounds are in Group 2 — move one sound to Group 1.';
@@ -448,15 +589,17 @@
       } else if (ready) {
         notif.className = 'ready'; notifIcon.textContent = '✓'; notifText.textContent = "Each group has one image and one sound. Press Next when you're happy with your answer.";
       } else if (!allPlaced) {
-        notif.className = 'info'; notifIcon.textContent = 'ℹ'; notifText.textContent = 'Drag all four stimuli into the groups below.';
+        notif.className = 'info';  notifIcon.textContent = 'ℹ'; notifText.textContent = 'Drag all four stimuli into the groups below.';
       } else {
-        notif.className = 'info'; notifIcon.textContent = 'ℹ'; notifText.textContent = 'Each group needs exactly one image and one sound.';
+        notif.className = 'info';  notifIcon.textContent = 'ℹ'; notifText.textContent = 'Each group needs exactly one image and one sound.';
       }
 
       document.getElementById('submit-btn').disabled = !ready;
     }
 
+    // ── Audio playback ─────────────────────────────────────────────────────────
     let currentAudio = null;
+
     document.querySelectorAll('.play-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -478,6 +621,7 @@
       });
     });
 
+    // ── Submit ─────────────────────────────────────────────────────────────────
     document.getElementById('submit-btn').addEventListener('click', async () => {
       const btn = document.getElementById('submit-btn');
       btn.disabled = true; btn.textContent = 'Saving...';
@@ -494,7 +638,8 @@
           body: JSON.stringify({
             prolific_pid: prolificPid, study_id: prolificStudy, session_id: prolificSession,
             left_image: leftImg, left_sound: leftSnd, right_image: rightImg, right_sound: rightSnd,
-            response_time_ms: Date.now() - startTime
+            response_time_ms: Date.now() - startTime,
+            px_per_mm: Math.round(pxPerMm * 100) / 100
           })
         });
         const data = await res.json();
