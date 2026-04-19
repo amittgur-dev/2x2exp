@@ -680,11 +680,15 @@
       const rightSnd = Object.keys(locations).find(id => locations[id] === 'right' && id.startsWith('sound'));
 
       try {
+        const fmtImg = id => id.replace(/^img/, '');
+        const fmtSnd = id => id.replace(/^sound/, '') + '_sound';
+
         const res = await fetch('/submit', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prolific_pid: prolificPid, study_id: prolificStudy, session_id: prolificSession,
-            left_image: leftImg, left_sound: leftSnd, right_image: rightImg, right_sound: rightSnd,
+            left_image: fmtImg(leftImg), left_sound: fmtSnd(leftSnd),
+            right_image: fmtImg(rightImg), right_sound: fmtSnd(rightSnd),
             response_time_ms: Date.now() - startTime,
             px_per_mm: Math.round(pxPerMm * 100) / 100
           })

@@ -11,8 +11,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Define which image+sound pairing is congruent with your hypothesis.
 // Use the filenames WITHOUT extension (must match files in public/stimuli/).
 const CONGRUENT_PAIRING = {
-  image: 'img1',   // e.g. img1.jpg → 'img1'
-  sound: 'sound1'  // e.g. sound1.mp3 → 'sound1'
+  image: 'RFRM',
+  sound: 'RFRM_sound'
 };
 
 // Replace with your Prolific completion URL once you have it.
