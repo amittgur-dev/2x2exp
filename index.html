@@ -172,6 +172,8 @@
     }
 
     .sound-icon {
+      width: 100px;
+      height: 100px;
       border-radius: 6px;
       background: #eff6ff;
       border: 2px solid #bfdbfe;
@@ -180,9 +182,8 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      /* width & height set dynamically via JS after calibration */
     }
-    .sound-icon svg { color: #2563eb; }
+    .sound-icon svg { width: 34px; height: 34px; color: #2563eb; }
     .play-btn {
       padding: 5px 14px;
       font-size: .8rem;
@@ -446,19 +447,10 @@
     // ── Apply calibrated size to all stimuli ───────────────────────────────────
     function applyStimulusSize() {
       const sizePx = Math.round(IMAGE_MM * pxPerMm);
-      const svgSz  = Math.round(sizePx * 0.35);
 
       document.querySelectorAll('.image-item img').forEach(img => {
         img.style.width  = sizePx + 'px';
         img.style.height = sizePx + 'px';
-      });
-      document.querySelectorAll('.sound-icon').forEach(icon => {
-        icon.style.width  = sizePx + 'px';
-        icon.style.height = sizePx + 'px';
-      });
-      document.querySelectorAll('.sound-icon svg').forEach(svg => {
-        svg.style.width  = svgSz + 'px';
-        svg.style.height = svgSz + 'px';
       });
     }
 
