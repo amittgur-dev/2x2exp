@@ -163,12 +163,16 @@
     .item.dragging { opacity: .35; cursor: grabbing; }
     .item-label    { font-size: .82rem; font-weight: 600; color: #64748b; }
 
+    .image-item {
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 4px !important;
+    }
     .image-item img {
       object-fit: contain;
-      border-radius: 6px;
-      background: #f0f2f5;
+      background: transparent;
       display: block;
-      /* width & height set dynamically via JS after calibration */
     }
 
     .sound-icon {
@@ -334,12 +338,12 @@
 
         <div class="item image-item" id="item-imgRFRM" draggable="true" data-type="image" data-id="imgRFRM">
           <img src="RFRM.png" onerror="this.style.background='#dde3ea'" alt="RFRM">
-          <span class="item-label">RFRM</span>
+
         </div>
 
         <div class="item image-item" id="item-imgSFSM" draggable="true" data-type="image" data-id="imgSFSM">
           <img src="SFSM.png" onerror="this.style.background='#c7d2e0'" alt="SFSM">
-          <span class="item-label">SFSM</span>
+
         </div>
 
         <div class="item sound-item" id="item-soundRFRM" draggable="true" data-type="sound" data-id="soundRFRM">
@@ -351,7 +355,7 @@
             </svg>
             <button class="play-btn" data-audio="soundRFRM">&#9654; Play</button>
           </div>
-          <span class="item-label">RFRM</span>
+
           <audio id="audio-soundRFRM" src="RFRM.wav"></audio>
         </div>
 
@@ -364,7 +368,7 @@
             </svg>
             <button class="play-btn" data-audio="soundSFSM">&#9654; Play</button>
           </div>
-          <span class="item-label">SFSM</span>
+
           <audio id="audio-soundSFSM" src="SFSM.wav"></audio>
         </div>
 
