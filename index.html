@@ -107,8 +107,7 @@
     #half-left  { left: 0;  background: #f4f5f7; }
     #half-right { right: 0; background: #eef0f3; }
 
-    #half-left.valid,  #half-right.valid  { background: #dcfce7; }
-    #half-left.invalid,#half-right.invalid{ background: #fee2e2; }
+    #half-left.invalid, #half-right.invalid { background: #fee2e2; }
     #half-left.drag-over, #half-right.drag-over { background: #dbeafe; }
 
     /* Divider */
@@ -202,6 +201,53 @@
     #notification.error { color: #b91c1c; }
     #notification.ready { color: #15803d; }
     #notification.info  { color: #6b7280; }
+
+    /* Confirmation screen */
+    #confirm-screen {
+      align-items: center; justify-content: center;
+      padding: 40px 24px;
+    }
+    #confirm-inner {
+      max-width: 580px; width: 100%;
+      background: #fff; border-radius: 16px;
+      padding: 36px 40px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.1);
+      display: flex; flex-direction: column; gap: 24px;
+      text-align: center;
+    }
+    #confirm-inner h2 { font-size: 1.5rem; font-weight: 700; }
+    .confirm-sub { color: #555; line-height: 1.6; font-size: .97rem; }
+
+    #confirm-groups {
+      display: flex; gap: 16px;
+    }
+    .confirm-group {
+      flex: 1; border: 2px solid #e2e8f0;
+      border-radius: 10px; padding: 14px 16px;
+      text-align: left;
+    }
+    .confirm-group-title { font-weight: 700; font-size: .9rem; color: #374151; margin-bottom: 12px; }
+    .confirm-group-content {
+      display: flex; gap: 14px;
+      align-items: center; justify-content: center;
+      flex-wrap: wrap;
+    }
+    .confirm-group-content img {
+      object-fit: contain; background: transparent; display: block;
+    }
+    .confirm-group-content .sound-icon { width: 80px; height: 80px; }
+    .confirm-group-content .sound-icon svg { width: 24px; height: 24px; }
+
+    #confirm-question { font-size: 1.05rem; font-weight: 600; color: #222; }
+
+    #confirm-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn-secondary {
+      padding: 12px 28px; font-size: 1rem; font-weight: 600;
+      background: #fff; color: #374151;
+      border: 2px solid #d1d5db; border-radius: 8px;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-secondary:hover { background: #f3f4f6; }
 
     /* End screen */
     #end-screen {
@@ -298,6 +344,32 @@
       <button class="btn-primary" id="submit-btn" disabled>Next &rarr;</button>
     </div>
 
+  </div>
+
+  <!-- CONFIRMATION -->
+  <div id="confirm-screen" class="screen">
+    <div id="confirm-inner">
+      <h2>Before you submit…</h2>
+      <p class="confirm-sub">Please listen to both sounds once more and confirm you are happy with your groupings.</p>
+
+      <div id="confirm-groups">
+        <div class="confirm-group">
+          <div class="confirm-group-title">Group 1</div>
+          <div id="confirm-group1-content" class="confirm-group-content"></div>
+        </div>
+        <div class="confirm-group">
+          <div class="confirm-group-title">Group 2</div>
+          <div id="confirm-group2-content" class="confirm-group-content"></div>
+        </div>
+      </div>
+
+      <div id="confirm-question">Are you sure about your choices?</div>
+
+      <div id="confirm-buttons">
+        <button class="btn-secondary" id="goback-btn">&#8592; Go back and change</button>
+        <button class="btn-primary"   id="confirm-submit-btn" disabled>Yes, submit</button>
+      </div>
+    </div>
   </div>
 
   <!-- END -->
@@ -453,16 +525,16 @@
       let lError = lImg > 1 || lSnd > 1;
       let rError = rImg > 1 || rSnd > 1;
 
-      halfLeft.classList.toggle('valid',   !lError && lImg === 1 && lSnd === 1);
+      halfLeft.classList.remove('valid');
       halfLeft.classList.toggle('invalid',  lError);
-      halfRight.classList.toggle('valid',  !rError && rImg === 1 && rSnd === 1);
+      halfRight.classList.remove('valid');
       halfRight.classList.toggle('invalid', rError);
 
-      // Labels reflect state
+      // Labels: red on error only
       const lLabel = document.getElementById('label-left');
       const rLabel = document.getElementById('label-right');
-      lLabel.style.color = lError ? '#dc2626' : (!lError && lImg===1 && lSnd===1) ? '#16a34a' : '#9ca3af';
-      rLabel.style.color = rError ? '#dc2626' : (!rError && rImg===1 && rSnd===1) ? '#16a34a' : '#9ca3af';
+      lLabel.style.color = lError ? '#dc2626' : '#9ca3af';
+      rLabel.style.color = rError ? '#dc2626' : '#9ca3af';
 
       let error = null;
       if      (lImg > 1) error = 'Both images are in Group 1 — move one image to Group 2.';
@@ -472,6 +544,7 @@
 
       const allPlaced  = inStimulus === 0;
       const validPairs = lImg === 1 && lSnd === 1 && rImg === 1 && rSnd === 1;
+      const bothHeard  = taskSoundsPlayed.size >= 2;
       const ready      = allPlaced && validPairs && !error;
 
       const notif     = document.getElementById('notification');
@@ -480,6 +553,8 @@
 
       if (error) {
         notif.className = 'error'; notifIcon.textContent = '⚠'; notifText.textContent = error;
+      } else if (ready && !bothHeard) {
+        notif.className = 'info';  notifIcon.textContent = 'ℹ'; notifText.textContent = 'Please listen to both sounds before continuing.';
       } else if (ready) {
         notif.className = 'ready'; notifIcon.textContent = '✓'; notifText.textContent = "Each group has one image and one sound. Press Next when you're happy with your answer.";
       } else if (!allPlaced) {
@@ -487,11 +562,14 @@
       } else {
         notif.className = 'info';  notifIcon.textContent = 'ℹ'; notifText.textContent = 'Each group needs exactly one image and one sound.';
       }
-      document.getElementById('submit-btn').disabled = !ready;
+      document.getElementById('submit-btn').disabled = !(ready && bothHeard);
     }
 
     // ── Audio ──────────────────────────────────────────────────────────────────
     let currentAudio = null;
+    const taskSoundsPlayed    = new Set(); // tracks sounds heard on task screen
+    const confirmSoundsPlayed = new Set(); // tracks sounds heard on confirm screen
+
     document.querySelectorAll('.play-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -509,13 +587,97 @@
         audio.play().catch(() => {});
         btn.classList.add('playing'); btn.innerHTML = '&#9646;&#9646; Stop';
         currentAudio = audio;
+        // Mark as heard on task screen
+        taskSoundsPlayed.add(btn.dataset.audio);
+        updateUI();
         audio.onended = () => { btn.classList.remove('playing'); btn.innerHTML = '&#9654; Play'; currentAudio = null; };
       });
     });
 
+    // ── Confirmation screen ────────────────────────────────────────────────────
+    document.getElementById('submit-btn').addEventListener('click', () => {
+      confirmSoundsPlayed.clear();
+      updateConfirmBtn();
+
+      const leftImg  = Object.keys(locations).find(id => locations[id] === 'left'  && id.startsWith('img'));
+      const leftSnd  = Object.keys(locations).find(id => locations[id] === 'left'  && id.startsWith('sound'));
+      const rightImg = Object.keys(locations).find(id => locations[id] === 'right' && id.startsWith('img'));
+      const rightSnd = Object.keys(locations).find(id => locations[id] === 'right' && id.startsWith('sound'));
+
+      buildConfirmGroup('confirm-group1-content', leftImg, leftSnd);
+      buildConfirmGroup('confirm-group2-content', rightImg, rightSnd);
+
+      showScreen('confirm-screen');
+    });
+
+    function updateConfirmBtn() {
+      const btn = document.getElementById('confirm-submit-btn');
+      const heard = confirmSoundsPlayed.size >= 2;
+      btn.disabled = !heard;
+      const q = document.getElementById('confirm-question');
+      if (!heard) {
+        q.textContent = 'Please listen to both sounds above before submitting.';
+        q.style.color = '#6b7280';
+      } else {
+        q.textContent = 'Are you sure about your choices?';
+        q.style.color = '#222';
+      }
+    }
+
+    function buildConfirmGroup(containerId, imgId, sndId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      // Image thumbnail at calibrated size (capped for the confirmation view)
+      const sizePx = Math.min(Math.round(IMAGE_MM * pxPerMm), 140);
+      const img = document.createElement('img');
+      img.src = imgId.replace('img', '') + '.png';
+      img.style.width = sizePx + 'px';
+      img.style.height = sizePx + 'px';
+      img.style.objectFit = 'contain';
+      container.appendChild(img);
+
+      // Sound icon with play button
+      const audio = document.getElementById('audio-' + sndId);
+      const icon = document.createElement('div');
+      icon.className = 'sound-icon';
+      icon.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+        <button class="play-btn">&#9654; Play</button>`;
+      const playBtn = icon.querySelector('.play-btn');
+      playBtn.addEventListener('click', () => {
+        if (!audio.paused) {
+          audio.pause(); audio.currentTime = 0;
+          playBtn.classList.remove('playing'); playBtn.innerHTML = '&#9654; Play'; return;
+        }
+        if (currentAudio && currentAudio !== audio) {
+          currentAudio.pause(); currentAudio.currentTime = 0;
+          document.querySelectorAll('.play-btn.playing').forEach(b => { b.classList.remove('playing'); b.innerHTML = '&#9654; Play'; });
+        }
+        audio.play().catch(() => {});
+        playBtn.classList.add('playing'); playBtn.innerHTML = '&#9646;&#9646; Stop';
+        currentAudio = audio;
+        confirmSoundsPlayed.add(sndId);
+        updateConfirmBtn();
+        audio.onended = () => { playBtn.classList.remove('playing'); playBtn.innerHTML = '&#9654; Play'; currentAudio = null; };
+      });
+      container.appendChild(icon);
+    }
+
+    document.getElementById('goback-btn').addEventListener('click', () => {
+      if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
+      document.querySelectorAll('.play-btn.playing').forEach(b => { b.classList.remove('playing'); b.innerHTML = '&#9654; Play'; });
+      showScreen('task-screen');
+    });
+
     // ── Submit ─────────────────────────────────────────────────────────────────
-    document.getElementById('submit-btn').addEventListener('click', async () => {
-      const btn = document.getElementById('submit-btn');
+    document.getElementById('confirm-submit-btn').addEventListener('click', async () => {
+      if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
+      const btn = document.getElementById('confirm-submit-btn');
       btn.disabled = true; btn.textContent = 'Saving...';
 
       const leftImg  = Object.keys(locations).find(id => locations[id] === 'left'  && id.startsWith('img'));
