@@ -14,13 +14,9 @@
       background: #f0f2f5;
     }
 
-    /* ── Screens ─────────────────────────────────────────────── */
     .screen { display: none; height: 100%; }
     .screen.active { display: flex; flex-direction: column; }
 
-    /* ══════════════════════════════════════════════════════════
-       START SCREEN
-    ══════════════════════════════════════════════════════════ */
     #start-screen {
       align-items: center;
       justify-content: center;
@@ -57,12 +53,8 @@
     .btn-primary:hover  { background: #1d4ed8; }
     .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
 
-    /* ══════════════════════════════════════════════════════════
-       TASK SCREEN
-    ══════════════════════════════════════════════════════════ */
     #task-screen { background: #e8ecf0; }
 
-    /* ── Top stimulus bar ──────────────────────────────────── */
     #stimulus-bar {
       flex-shrink: 0;
       background: #fff;
@@ -89,7 +81,6 @@
       align-items: center;
       width: 100%;
     }
-    /* placeholder shown when all items have been dragged away */
     #stimulus-empty {
       color: #bbb;
       font-size: .9rem;
@@ -97,7 +88,6 @@
       pointer-events: none;
     }
 
-    /* ── Draggable items ───────────────────────────────────── */
     .item {
       display: flex;
       flex-direction: column;
@@ -113,10 +103,8 @@
     }
     .item:hover     { border-color: #2563eb; box-shadow: 0 4px 14px rgba(37,99,235,.18); }
     .item.dragging  { opacity: .35; cursor: grabbing; }
-
     .item-label { font-size: .76rem; font-weight: 500; color: #64748b; }
 
-    /* image items */
     .image-item img {
       width: 90px;
       height: 90px;
@@ -126,7 +114,6 @@
       display: block;
     }
 
-    /* sound items */
     .sound-icon {
       width: 90px;
       height: 90px;
@@ -155,7 +142,6 @@
     .play-btn:hover   { background: #1d4ed8; }
     .play-btn.playing { background: #dc2626; }
 
-    /* ── Drop zones (lower half) ───────────────────────────── */
     #zones-container {
       flex: 1;
       display: flex;
@@ -173,7 +159,6 @@
     }
     #zone-left  { background: #f7f8fa; border-right: 3px solid #d1d5db; }
     #zone-right { background: #f7f8fa; }
-
     .zone.drag-over { background: #eff6ff; }
 
     .zone-header {
@@ -208,7 +193,6 @@
       pointer-events: none;
     }
 
-    /* ── Bottom bar ────────────────────────────────────────── */
     #bottom-bar {
       flex-shrink: 0;
       background: #fff;
@@ -233,9 +217,6 @@
     #notification.info   { color: #6b7280; }
     #notification-icon   { font-size: 1.1rem; }
 
-    /* ══════════════════════════════════════════════════════════
-       END SCREEN
-    ══════════════════════════════════════════════════════════ */
     #end-screen {
       align-items: center;
       justify-content: center;
@@ -250,9 +231,6 @@
 </head>
 <body>
 
-  <!-- ══════════════════════════════════════════════════════════
-       START SCREEN
-  ══════════════════════════════════════════════════════════ -->
   <div id="start-screen" class="screen active">
     <h1>Matching Task</h1>
     <div class="instructions-box">
@@ -264,68 +242,54 @@
     <button class="btn-primary" id="start-btn">Start</button>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════════
-       TASK SCREEN
-  ══════════════════════════════════════════════════════════ -->
   <div id="task-screen" class="screen">
 
-    <!-- Top bar: all 4 stimuli start here -->
     <div id="stimulus-bar">
       <div id="stimulus-bar-label">Drag each image and its matching sound to the same side</div>
       <div id="stimulus-items">
 
         <span id="stimulus-empty">All items placed — drag them back here to reposition.</span>
 
-        <!-- Image 1 -->
-        <div class="item image-item" id="item-img1" draggable="true" data-type="image" data-id="img1">
-          <img src="stimuli/img1.jpg"
-               onerror="this.style.cssText='background:#dde3ea;width:90px;height:90px;display:block'; this.removeAttribute('src')"
-               alt="Image 1">
-          <span class="item-label">Image 1</span>
+        <div class="item image-item" id="item-imgRFRM" draggable="true" data-type="image" data-id="imgRFRM">
+          <img src="RFRM.png" onerror="this.style.cssText='background:#dde3ea;width:90px;height:90px;display:block'; this.removeAttribute('src')" alt="RFRM">
+          <span class="item-label">RFRM</span>
         </div>
 
-        <!-- Image 2 -->
-        <div class="item image-item" id="item-img2" draggable="true" data-type="image" data-id="img2">
-          <img src="stimuli/img2.jpg"
-               onerror="this.style.cssText='background:#c7d2e0;width:90px;height:90px;display:block'; this.removeAttribute('src')"
-               alt="Image 2">
-          <span class="item-label">Image 2</span>
+        <div class="item image-item" id="item-imgSFSM" draggable="true" data-type="image" data-id="imgSFSM">
+          <img src="SFSM.png" onerror="this.style.cssText='background:#c7d2e0;width:90px;height:90px;display:block'; this.removeAttribute('src')" alt="SFSM">
+          <span class="item-label">SFSM</span>
         </div>
 
-        <!-- Sound 1 -->
-        <div class="item sound-item" id="item-sound1" draggable="true" data-type="sound" data-id="sound1">
+        <div class="item sound-item" id="item-soundRFRM" draggable="true" data-type="sound" data-id="soundRFRM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
               <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
             </svg>
-            <button class="play-btn" data-audio="sound1">&#9654; Play</button>
+            <button class="play-btn" data-audio="soundRFRM">&#9654; Play</button>
           </div>
-          <span class="item-label">Sound 1</span>
-          <audio id="audio-sound1" src="stimuli/sound1.mp3"></audio>
+          <span class="item-label">RFRM</span>
+          <audio id="audio-soundRFRM" src="RFRM.wav"></audio>
         </div>
 
-        <!-- Sound 2 -->
-        <div class="item sound-item" id="item-sound2" draggable="true" data-type="sound" data-id="sound2">
+        <div class="item sound-item" id="item-soundSFSM" draggable="true" data-type="sound" data-id="soundSFSM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
               <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
             </svg>
-            <button class="play-btn" data-audio="sound2">&#9654; Play</button>
+            <button class="play-btn" data-audio="soundSFSM">&#9654; Play</button>
           </div>
-          <span class="item-label">Sound 2</span>
-          <audio id="audio-sound2" src="stimuli/sound2.mp3"></audio>
+          <span class="item-label">SFSM</span>
+          <audio id="audio-soundSFSM" src="SFSM.wav"></audio>
         </div>
 
       </div>
-    </div><!-- /stimulus-bar -->
+    </div>
 
-    <!-- Lower half: two drop zones -->
     <div id="zones-container">
-
       <div class="zone" id="zone-left" data-zone="left">
         <div class="zone-header">
           <span class="zone-name">Group 1</span>
@@ -345,10 +309,8 @@
           <span class="zone-hint">Drag one image + one sound here</span>
         </div>
       </div>
+    </div>
 
-    </div><!-- /zones-container -->
-
-    <!-- Bottom bar: notification + submit -->
     <div id="bottom-bar">
       <div id="notification" class="info">
         <span id="notification-icon">&#9432;</span>
@@ -357,11 +319,8 @@
       <button class="btn-primary" id="submit-btn" disabled>Next &rarr;</button>
     </div>
 
-  </div><!-- /task-screen -->
+  </div>
 
-  <!-- ══════════════════════════════════════════════════════════
-       END SCREEN
-  ══════════════════════════════════════════════════════════ -->
   <div id="end-screen" class="screen">
     <h1>Thank you!</h1>
     <p>Your response has been recorded.</p>
@@ -369,20 +328,17 @@
   </div>
 
   <script>
-    // ── State ──────────────────────────────────────────────────────────────────
-    // location: 'stimulus' | 'left' | 'right'
     const locations = {
-      img1: 'stimulus', img2: 'stimulus',
-      sound1: 'stimulus', sound2: 'stimulus'
+      imgRFRM: 'stimulus', imgSFSM: 'stimulus',
+      soundRFRM: 'stimulus', soundSFSM: 'stimulus'
     };
     let draggedId  = null;
     let startTime  = null;
     const params = new URLSearchParams(window.location.search);
-    const prolificPid   = params.get('PROLIFIC_PID')  || 'unknown';
-    const prolificStudy = params.get('STUDY_ID')      || 'unknown';
-    const prolificSession = params.get('SESSION_ID')  || 'unknown';
+    const prolificPid     = params.get('PROLIFIC_PID') || 'unknown';
+    const prolificStudy   = params.get('STUDY_ID')     || 'unknown';
+    const prolificSession = params.get('SESSION_ID')   || 'unknown';
 
-    // ── Screen helper ──────────────────────────────────────────────────────────
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
@@ -393,7 +349,6 @@
       showScreen('task-screen');
     });
 
-    // ── DOM refs ───────────────────────────────────────────────────────────────
     const stimulusItems = document.getElementById('stimulus-items');
     const stimulusEmpty = document.getElementById('stimulus-empty');
     const dropLeft      = document.getElementById('drop-left');
@@ -401,33 +356,22 @@
     const zoneLeft      = document.getElementById('zone-left');
     const zoneRight     = document.getElementById('zone-right');
 
-    function dropAreaForZone(zone) {
-      return zone === 'left' ? dropLeft : dropRight;
-    }
-    function zoneElForZone(zone) {
-      return zone === 'left' ? zoneLeft : zoneRight;
-    }
+    function dropAreaForZone(zone) { return zone === 'left' ? dropLeft : dropRight; }
+    function zoneElForZone(zone)   { return zone === 'left' ? zoneLeft : zoneRight; }
 
-    // ── Move item ──────────────────────────────────────────────────────────────
     function moveItem(id, toZone) {
       const fromZone = locations[id];
       if (fromZone === toZone) return;
-
       const el = document.getElementById('item-' + id);
-
       if (toZone === 'stimulus') {
         stimulusItems.appendChild(el);
       } else {
         const dropArea = dropAreaForZone(toZone);
-        // Remove hint if present
         const hint = dropArea.querySelector('.zone-hint');
         if (hint) hint.remove();
         dropArea.appendChild(el);
       }
-
       locations[id] = toZone;
-
-      // Restore hint in source drop area if now empty
       if (fromZone !== 'stimulus') {
         const sourceArea = dropAreaForZone(fromZone);
         if (sourceArea.querySelectorAll('.item').length === 0) {
@@ -437,11 +381,9 @@
           sourceArea.appendChild(hint);
         }
       }
-
       updateUI();
     }
 
-    // ── Drag events on items ───────────────────────────────────────────────────
     document.querySelectorAll('.item').forEach(el => {
       el.addEventListener('dragstart', e => {
         draggedId = el.dataset.id;
@@ -454,46 +396,27 @@
       });
     });
 
-    // ── Drop targets ───────────────────────────────────────────────────────────
     function setupDropTarget(el, zone) {
-      el.addEventListener('dragover', e => {
-        e.preventDefault();
-        zoneElForZone(zone)?.classList.add('drag-over');
-      });
-      el.addEventListener('dragleave', e => {
-        if (!el.contains(e.relatedTarget)) {
-          zoneElForZone(zone)?.classList.remove('drag-over');
-        }
-      });
-      el.addEventListener('drop', e => {
-        e.preventDefault();
-        zoneElForZone(zone)?.classList.remove('drag-over');
-        if (draggedId) moveItem(draggedId, zone);
-      });
+      el.addEventListener('dragover', e => { e.preventDefault(); zoneElForZone(zone)?.classList.add('drag-over'); });
+      el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) zoneElForZone(zone)?.classList.remove('drag-over'); });
+      el.addEventListener('drop', e => { e.preventDefault(); zoneElForZone(zone)?.classList.remove('drag-over'); if (draggedId) moveItem(draggedId, zone); });
     }
 
     setupDropTarget(zoneLeft,  'left');
     setupDropTarget(zoneRight, 'right');
 
-    // Allow dropping back to the stimulus bar
     const stimBar = document.getElementById('stimulus-bar');
     stimBar.addEventListener('dragover', e => e.preventDefault());
-    stimBar.addEventListener('drop', e => {
-      e.preventDefault();
-      if (draggedId && locations[draggedId] !== 'stimulus') moveItem(draggedId, 'stimulus');
-    });
+    stimBar.addEventListener('drop', e => { e.preventDefault(); if (draggedId && locations[draggedId] !== 'stimulus') moveItem(draggedId, 'stimulus'); });
 
-    // ── UI update ──────────────────────────────────────────────────────────────
     function countIn(zone, type) {
       return Object.entries(locations).filter(([id, loc]) => loc === zone && id.startsWith(type)).length;
     }
 
     function updateUI() {
-      // Stimulus bar empty message
       const inStimulus = Object.values(locations).filter(l => l === 'stimulus').length;
       stimulusEmpty.style.display = inStimulus === 0 ? 'block' : 'none';
 
-      // Zone counts
       const lImg = countIn('left',  'img'),  lSnd = countIn('left',  'sound');
       const rImg = countIn('right', 'img'),  rSnd = countIn('right', 'sound');
       const lTotal = lImg + lSnd, rTotal = rImg + rSnd;
@@ -501,10 +424,8 @@
       document.getElementById('count-left').textContent  = lTotal + (lTotal === 1 ? ' item' : ' items');
       document.getElementById('count-right').textContent = rTotal + (rTotal === 1 ? ' item' : ' items');
 
-      // Determine error / ready state
       let error = null;
-
-      if (lImg > 1) error = 'Both images are in Group 1 — move one image to Group 2.';
+      if (lImg > 1)      error = 'Both images are in Group 1 — move one image to Group 2.';
       else if (rImg > 1) error = 'Both images are in Group 2 — move one image to Group 1.';
       else if (lSnd > 1) error = 'Both sounds are in Group 1 — move one sound to Group 2.';
       else if (rSnd > 1) error = 'Both sounds are in Group 2 — move one sound to Group 1.';
@@ -513,83 +434,53 @@
       const validPairs = lImg === 1 && lSnd === 1 && rImg === 1 && rSnd === 1;
       const ready      = allPlaced && validPairs && !error;
 
-      // Zone visual states
       zoneLeft.classList.toggle('valid',   !error && lImg === 1 && lSnd === 1);
       zoneLeft.classList.toggle('invalid', !!error && (lImg > 1 || lSnd > 1));
       zoneRight.classList.toggle('valid',  !error && rImg === 1 && rSnd === 1);
       zoneRight.classList.toggle('invalid', !!error && (rImg > 1 || rSnd > 1));
 
-      // Notification
       const notif     = document.getElementById('notification');
       const notifIcon = document.getElementById('notification-icon');
       const notifText = document.getElementById('notification-text');
 
       if (error) {
-        notif.className = 'error';
-        notifIcon.textContent = '⚠';
-        notifText.textContent = error;
+        notif.className = 'error'; notifIcon.textContent = '⚠'; notifText.textContent = error;
       } else if (ready) {
-        notif.className = 'ready';
-        notifIcon.textContent = '✓';
-        notifText.textContent = 'Each group has one image and one sound. Press Next when you\'re happy with your answer.';
+        notif.className = 'ready'; notifIcon.textContent = '✓'; notifText.textContent = "Each group has one image and one sound. Press Next when you're happy with your answer.";
       } else if (!allPlaced) {
-        notif.className = 'info';
-        notifIcon.textContent = 'ℹ';
-        notifText.textContent = 'Drag all four stimuli into the groups below.';
+        notif.className = 'info'; notifIcon.textContent = 'ℹ'; notifText.textContent = 'Drag all four stimuli into the groups below.';
       } else {
-        notif.className = 'info';
-        notifIcon.textContent = 'ℹ';
-        notifText.textContent = 'Each group needs exactly one image and one sound.';
+        notif.className = 'info'; notifIcon.textContent = 'ℹ'; notifText.textContent = 'Each group needs exactly one image and one sound.';
       }
 
       document.getElementById('submit-btn').disabled = !ready;
     }
 
-    // ── Audio playback ─────────────────────────────────────────────────────────
     let currentAudio = null;
-
     document.querySelectorAll('.play-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
         const audio = document.getElementById('audio-' + btn.dataset.audio);
         if (!audio) return;
-
         if (!audio.paused) {
-          audio.pause();
-          audio.currentTime = 0;
-          btn.classList.remove('playing');
-          btn.innerHTML = '&#9654; Play';
-          currentAudio = null;
-          return;
+          audio.pause(); audio.currentTime = 0;
+          btn.classList.remove('playing'); btn.innerHTML = '&#9654; Play';
+          currentAudio = null; return;
         }
-
         if (currentAudio && currentAudio !== audio) {
-          currentAudio.pause();
-          currentAudio.currentTime = 0;
-          document.querySelectorAll('.play-btn.playing').forEach(b => {
-            b.classList.remove('playing');
-            b.innerHTML = '&#9654; Play';
-          });
+          currentAudio.pause(); currentAudio.currentTime = 0;
+          document.querySelectorAll('.play-btn.playing').forEach(b => { b.classList.remove('playing'); b.innerHTML = '&#9654; Play'; });
         }
-
         audio.play().catch(() => {});
-        btn.classList.add('playing');
-        btn.innerHTML = '&#9646;&#9646; Stop';
+        btn.classList.add('playing'); btn.innerHTML = '&#9646;&#9646; Stop';
         currentAudio = audio;
-
-        audio.onended = () => {
-          btn.classList.remove('playing');
-          btn.innerHTML = '&#9654; Play';
-          currentAudio = null;
-        };
+        audio.onended = () => { btn.classList.remove('playing'); btn.innerHTML = '&#9654; Play'; currentAudio = null; };
       });
     });
 
-    // ── Submit ─────────────────────────────────────────────────────────────────
     document.getElementById('submit-btn').addEventListener('click', async () => {
       const btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.textContent = 'Saving...';
+      btn.disabled = true; btn.textContent = 'Saving...';
 
       const leftImg  = Object.keys(locations).find(id => locations[id] === 'left'  && id.startsWith('img'));
       const leftSnd  = Object.keys(locations).find(id => locations[id] === 'left'  && id.startsWith('sound'));
@@ -601,34 +492,22 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prolific_pid:     prolificPid,
-            study_id:         prolificStudy,
-            session_id:       prolificSession,
-            left_image:       leftImg,
-            left_sound:       leftSnd,
-            right_image:      rightImg,
-            right_sound:      rightSnd,
+            prolific_pid: prolificPid, study_id: prolificStudy, session_id: prolificSession,
+            left_image: leftImg, left_sound: leftSnd, right_image: rightImg, right_sound: rightSnd,
             response_time_ms: Date.now() - startTime
           })
         });
-
         const data = await res.json();
         showScreen('end-screen');
-
         let secs = 5;
         const msg = document.getElementById('redirect-msg');
         const tick = setInterval(() => {
           secs--;
           msg.textContent = `You will be redirected to Prolific in ${secs} second${secs !== 1 ? 's' : ''}...`;
-          if (secs <= 0) {
-            clearInterval(tick);
-            window.location.href = data.completion_url;
-          }
+          if (secs <= 0) { clearInterval(tick); window.location.href = data.completion_url; }
         }, 1000);
-
       } catch {
-        btn.disabled = false;
-        btn.textContent = 'Next →';
+        btn.disabled = false; btn.textContent = 'Next →';
         const notif = document.getElementById('notification');
         notif.className = 'error';
         document.getElementById('notification-icon').textContent = '⚠';
