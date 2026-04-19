@@ -1,9 +1,11 @@
 const express = require('express');
+const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Experiment configuration ─────────────────────────────────────────────────
 // Define which image+sound pairing is congruent with your hypothesis.
