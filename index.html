@@ -17,7 +17,6 @@
     .screen { display: none; height: 100%; }
     .screen.active { display: flex; flex-direction: column; }
 
-    /* ── Shared button ─────────────────────────────────────── */
     .btn-primary {
       padding: 14px 52px;
       font-size: 1.1rem;
@@ -32,253 +31,182 @@
     .btn-primary:hover    { background: #1d4ed8; }
     .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
 
-    /* ══════════════════════════════════════════════════════════
-       CALIBRATION SCREEN
-    ══════════════════════════════════════════════════════════ */
+    /* ── Calibration ─────────────────────────────────────────── */
     #calibration-screen {
-      align-items: center;
-      justify-content: center;
-      gap: 28px;
-      padding: 40px 24px;
-      text-align: center;
+      align-items: center; justify-content: center;
+      gap: 28px; padding: 40px 24px; text-align: center;
     }
     #calibration-screen h1 { font-size: 1.8rem; font-weight: 700; }
     #calibration-screen .subtitle {
-      max-width: 500px;
-      color: #555;
-      line-height: 1.65;
-      font-size: .97rem;
+      max-width: 500px; color: #555; line-height: 1.65; font-size: .97rem;
     }
-
-    #card-wrapper {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-    }
-
+    #card-wrapper { display: flex; flex-direction: column; align-items: center; gap: 16px; }
     #calibration-card {
-      background: #fff;
-      border: 2px solid #2563eb;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #9ca3af;
-      font-size: .82rem;
-      font-weight: 500;
-      letter-spacing: .04em;
-      transition: width .05s;
+      background: #fff; border: 2px solid #2563eb; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #9ca3af; font-size: .82rem; font-weight: 500; letter-spacing: .04em;
       user-select: none;
-      /* height is set dynamically to maintain credit-card aspect ratio */
     }
+    #calib-slider { width: 340px; accent-color: #2563eb; }
+    #calib-hint   { font-size: .85rem; color: #9ca3af; }
 
-    #calib-slider {
-      width: 340px;
-      accent-color: #2563eb;
-    }
-
-    #calib-hint {
-      font-size: .85rem;
-      color: #9ca3af;
-    }
-
-    /* ══════════════════════════════════════════════════════════
-       START SCREEN
-    ══════════════════════════════════════════════════════════ */
+    /* ── Start screen ────────────────────────────────────────── */
     #start-screen {
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-      padding: 40px 24px;
-      text-align: center;
+      align-items: center; justify-content: center;
+      gap: 24px; padding: 40px 24px; text-align: center;
     }
     #start-screen h1 { font-size: 2rem; font-weight: 700; }
     .instructions-box {
-      max-width: 520px;
-      background: #fff;
-      border-radius: 14px;
-      padding: 28px 32px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.09);
-      line-height: 1.75;
-      color: #444;
-      font-size: 1rem;
-      text-align: left;
+      max-width: 520px; background: #fff; border-radius: 14px;
+      padding: 28px 32px; box-shadow: 0 2px 12px rgba(0,0,0,.09);
+      line-height: 1.75; color: #444; font-size: 1rem; text-align: left;
     }
     .instructions-box p { margin-bottom: 10px; }
     .instructions-box p:last-child { margin-bottom: 0; }
 
-    /* ══════════════════════════════════════════════════════════
-       TASK SCREEN
-    ══════════════════════════════════════════════════════════ */
+    /* ── Task screen ─────────────────────────────────────────── */
     #task-screen { background: #e8ecf0; }
 
+    /* Stimulus bar */
     #stimulus-bar {
       flex-shrink: 0;
       background: #fff;
       border-bottom: 2px solid #d1d5db;
-      padding: 16px 32px;
+      padding: 14px 32px;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 10px;
     }
     #stimulus-bar-label {
-      font-size: .75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .09em;
-      color: #9ca3af;
+      font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .09em; color: #9ca3af;
     }
     #stimulus-items {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
+      display: flex; gap: 20px; flex-wrap: wrap;
+      justify-content: center; align-items: center; width: 100%;
+      min-height: 20px;
     }
-    #stimulus-empty {
-      color: #bbb;
-      font-size: .9rem;
-      display: none;
+    #stimulus-empty { color: #bbb; font-size: .85rem; display: none; pointer-events: none; }
+
+    /* Canvas: free-position area */
+    #canvas {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Left/right half backgrounds */
+    .half {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 50%;
+      transition: background .2s;
+      pointer-events: none;
+    }
+    #half-left  { left: 0;  background: #f4f5f7; }
+    #half-right { right: 0; background: #eef0f3; }
+
+    #half-left.valid,  #half-right.valid  { background: #dcfce7; }
+    #half-left.invalid,#half-right.invalid{ background: #fee2e2; }
+    #half-left.drag-over, #half-right.drag-over { background: #dbeafe; }
+
+    /* Divider */
+    #divider {
+      position: absolute;
+      left: 50%; top: 0; bottom: 0;
+      width: 2px;
+      background: #d1d5db;
       pointer-events: none;
     }
 
-    /* ── Draggable items ───────────────────────────────────── */
+    /* Group labels */
+    .group-label {
+      position: absolute;
+      top: 14px;
+      font-size: 1rem; font-weight: 700;
+      pointer-events: none;
+      transition: color .2s;
+      color: #9ca3af;
+      z-index: 1;
+    }
+    #label-left  { left:  20px; }
+    #label-right { left: calc(50% + 20px); }
+
+    #half-left.valid   ~ #label-left,
+    #half-right.valid  ~ #label-right  { color: #16a34a; }
+    #half-left.invalid ~ #label-left,
+    #half-right.invalid~ #label-right  { color: #dc2626; }
+
+    /* Zone hints */
+    .canvas-hint {
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      font-size: .92rem; color: #c0c7d0;
+      pointer-events: none; text-align: center;
+      width: 180px;
+    }
+    #hint-left  { left:  calc(25% - 90px); }
+    #hint-right { left:  calc(75% - 90px); }
+
+    /* Draggable items */
     .item {
-      display: flex;
+      display: inline-flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
-      background: #f8fafc;
-      border: 2px solid #e2e8f0;
-      border-radius: 10px;
+      gap: 6px;
       cursor: grab;
       user-select: none;
-      transition: border-color .15s, box-shadow .15s, opacity .15s;
+      transition: opacity .15s;
+      z-index: 10;
     }
-    .item:hover    { border-color: #2563eb; box-shadow: 0 4px 14px rgba(37,99,235,.18); }
-    .item.dragging { opacity: .35; cursor: grabbing; }
-    .item-label    { font-size: .82rem; font-weight: 600; color: #64748b; }
+    .item.dragging { opacity: .3; cursor: grabbing; }
 
-    .image-item {
-      background: none !important;
-      border: none !important;
-      box-shadow: none !important;
-      padding: 4px !important;
-    }
-    .image-item img {
-      object-fit: contain;
-      background: transparent;
-      display: block;
-    }
+    /* Images: no box */
+    .image-item { padding: 0; background: none; border: none; }
+    .image-item img { object-fit: contain; background: transparent; display: block; }
 
+    /* Sounds: keep small box */
+    .sound-item { background: none; border: none; padding: 0; }
     .sound-icon {
-      width: 100px;
-      height: 100px;
-      border-radius: 6px;
+      width: 100px; height: 100px;
+      border-radius: 10px;
       background: #eff6ff;
       border: 2px solid #bfdbfe;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px;
     }
-    .sound-icon svg { width: 34px; height: 34px; color: #2563eb; }
+    .sound-icon svg  { width: 32px; height: 32px; color: #2563eb; }
     .play-btn {
-      padding: 5px 14px;
-      font-size: .8rem;
-      font-weight: 600;
-      background: #2563eb;
-      color: #fff;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: background .15s;
-      pointer-events: all;
-      white-space: nowrap;
+      padding: 4px 12px; font-size: .75rem; font-weight: 600;
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 20px; cursor: pointer;
+      transition: background .15s; pointer-events: all; white-space: nowrap;
     }
     .play-btn:hover   { background: #1d4ed8; }
     .play-btn.playing { background: #dc2626; }
 
-    /* ── Drop zones ────────────────────────────────────────── */
-    #zones-container { flex: 1; display: flex; overflow: hidden; }
-
-    .zone {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-      padding: 24px;
-      transition: background .2s, border-color .2s;
-      position: relative;
-    }
-    #zone-left  { background: #f7f8fa; border-right: 3px solid #d1d5db; }
-    #zone-right { background: #f7f8fa; }
-
-    .zone.drag-over { background: #dbeafe; }
-    .zone.valid     { background: #dcfce7; }
-    .zone.invalid   { background: #fee2e2; }
-
-    .zone-label {
-      position: absolute;
-      top: 14px;
-      left: 18px;
-      font-size: 1rem;
-      font-weight: 700;
-      color: #9ca3af;
-      pointer-events: none;
-      transition: color .2s;
-    }
-    .zone.valid   .zone-label { color: #16a34a; }
-    .zone.invalid .zone-label { color: #dc2626; }
-
-    .zone-hint {
-      color: #c0c7d0;
-      font-size: .95rem;
-      pointer-events: none;
-      text-align: center;
-    }
-    .zone.valid   .zone-hint,
-    .zone.invalid .zone-hint { display: none; }
-
-    /* ── Bottom bar ────────────────────────────────────────── */
+    /* Bottom bar */
     #bottom-bar {
-      flex-shrink: 0;
-      background: #fff;
+      flex-shrink: 0; background: #fff;
       border-top: 2px solid #d1d5db;
-      padding: 14px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      padding: 12px 32px;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
     }
     #notification {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: .92rem;
-      min-height: 1.5em;
+      flex: 1; display: flex; align-items: center;
+      gap: 8px; font-size: .9rem; min-height: 1.4em;
     }
     #notification.error { color: #b91c1c; }
     #notification.ready { color: #15803d; }
     #notification.info  { color: #6b7280; }
 
-    /* ══════════════════════════════════════════════════════════
-       END SCREEN
-    ══════════════════════════════════════════════════════════ */
+    /* End screen */
     #end-screen {
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      text-align: center;
-      padding: 40px 24px;
+      align-items: center; justify-content: center;
+      gap: 16px; text-align: center; padding: 40px 24px;
     }
     #end-screen h1 { font-size: 2rem; }
     #end-screen p  { color: #555; }
@@ -287,28 +215,22 @@
 </head>
 <body>
 
-  <!-- ══════════════════════════════════════════════════════════
-       CALIBRATION SCREEN
-  ══════════════════════════════════════════════════════════ -->
+  <!-- CALIBRATION -->
   <div id="calibration-screen" class="screen active">
     <h1>Screen Calibration</h1>
     <p class="subtitle">
       To make sure everyone sees the images at the same size, please grab a credit card (or any bank card) and place it next to your screen.<br><br>
       Use the slider to resize the rectangle below until it matches the size of your card exactly.
     </p>
-
     <div id="card-wrapper">
       <div id="calibration-card">CREDIT CARD SIZE</div>
       <input type="range" id="calib-slider" min="150" max="700" value="323">
       <span id="calib-hint">Drag the slider until the rectangle matches your card</span>
     </div>
-
     <button class="btn-primary" id="calib-confirm-btn">Confirm &amp; Continue</button>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════════
-       START SCREEN
-  ══════════════════════════════════════════════════════════ -->
+  <!-- START -->
   <div id="start-screen" class="screen">
     <h1>Matching Task</h1>
     <div class="instructions-box">
@@ -320,27 +242,20 @@
     <button class="btn-primary" id="start-btn">Start</button>
   </div>
 
-  <!-- ══════════════════════════════════════════════════════════
-       TASK SCREEN
-  ══════════════════════════════════════════════════════════ -->
+  <!-- TASK -->
   <div id="task-screen" class="screen">
 
     <div id="stimulus-bar">
       <div id="stimulus-bar-label">Drag each image and its matching sound to the same side</div>
       <div id="stimulus-items">
-
         <span id="stimulus-empty">All items placed — drag them back here to reposition.</span>
 
         <div class="item image-item" id="item-imgRFRM" draggable="true" data-type="image" data-id="imgRFRM">
           <img src="RFRM.png" onerror="this.style.background='#dde3ea'" alt="RFRM">
-
         </div>
-
         <div class="item image-item" id="item-imgSFSM" draggable="true" data-type="image" data-id="imgSFSM">
           <img src="SFSM.png" onerror="this.style.background='#c7d2e0'" alt="SFSM">
-
         </div>
-
         <div class="item sound-item" id="item-soundRFRM" draggable="true" data-type="sound" data-id="soundRFRM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -351,8 +266,6 @@
             <button class="play-btn" data-audio="soundRFRM">&#9654; Play</button>
           </div>
         </div>
-        <audio id="audio-soundRFRM" src="RFRM.wav" style="display:none"></audio>
-
         <div class="item sound-item" id="item-soundSFSM" draggable="true" data-type="sound" data-id="soundSFSM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -363,21 +276,18 @@
             <button class="play-btn" data-audio="soundSFSM">&#9654; Play</button>
           </div>
         </div>
-        <audio id="audio-soundSFSM" src="SFSM.wav" style="display:none"></audio>
-
       </div>
     </div>
 
-    <div id="zones-container">
-      <div class="zone" id="zone-left" data-zone="left">
-        <span class="zone-label">Group 1</span>
-        <span class="zone-hint">Drag one image + one sound here</span>
-      </div>
-
-      <div class="zone" id="zone-right" data-zone="right">
-        <span class="zone-label">Group 2</span>
-        <span class="zone-hint">Drag one image + one sound here</span>
-      </div>
+    <!-- Free-position canvas -->
+    <div id="canvas">
+      <div class="half" id="half-left"></div>
+      <div class="half" id="half-right"></div>
+      <div id="divider"></div>
+      <span class="group-label" id="label-left">Group 1</span>
+      <span class="group-label" id="label-right">Group 2</span>
+      <span class="canvas-hint" id="hint-left">Drag one image + one sound here</span>
+      <span class="canvas-hint" id="hint-right">Drag one image + one sound here</span>
     </div>
 
     <div id="bottom-bar">
@@ -390,71 +300,57 @@
 
   </div>
 
-  <!-- ══════════════════════════════════════════════════════════
-       END SCREEN
-  ══════════════════════════════════════════════════════════ -->
+  <!-- END -->
   <div id="end-screen" class="screen">
     <h1>Thank you!</h1>
     <p>Your response has been recorded.</p>
     <p id="redirect-msg">You will be redirected to Prolific in a moment...</p>
   </div>
 
+  <audio id="audio-soundRFRM" src="RFRM.wav" style="display:none"></audio>
+  <audio id="audio-soundSFSM" src="SFSM.wav" style="display:none"></audio>
+
   <script>
     // ── Calibration ────────────────────────────────────────────────────────────
-    // Credit card: 85.6 mm wide × 54 mm tall (ISO/IEC 7810 ID-1)
-    const CARD_W_MM = 85.6;
-    const CARD_H_MM = 54.0;
-    const ASPECT    = CARD_H_MM / CARD_W_MM; // ~0.631
+    const CARD_W_MM = 85.6, CARD_H_MM = 54.0;
+    const IMAGE_MM  = 68; // 80mm × 0.85
 
-    // Target image display size in mm
-    const IMAGE_MM  = 80;
-
-    let pxPerMm = 96 / 25.4; // fallback: assume 96 DPI
+    let pxPerMm = 96 / 25.4;
 
     const calibCard   = document.getElementById('calibration-card');
     const calibSlider = document.getElementById('calib-slider');
 
     function applySlider(val) {
-      const w = parseInt(val);
-      const h = Math.round(w * ASPECT);
-      calibCard.style.width  = w + 'px';
-      calibCard.style.height = h + 'px';
+      const w = parseInt(val), h = Math.round(w * CARD_H_MM / CARD_W_MM);
+      calibCard.style.width = w + 'px'; calibCard.style.height = h + 'px';
     }
-
     applySlider(calibSlider.value);
     calibSlider.addEventListener('input', () => applySlider(calibSlider.value));
 
     document.getElementById('calib-confirm-btn').addEventListener('click', () => {
-      const cardWidthPx = parseInt(calibCard.style.width);
-      pxPerMm = cardWidthPx / CARD_W_MM;
-      applyStimulusSize();
+      pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
+      applyImageSize();
       showScreen('start-screen');
     });
 
-    // ── Apply calibrated size to all stimuli ───────────────────────────────────
-    function applyStimulusSize() {
-      const sizePx = Math.round(IMAGE_MM * pxPerMm);
-
+    function applyImageSize() {
+      const px = Math.round(IMAGE_MM * pxPerMm);
       document.querySelectorAll('.image-item img').forEach(img => {
-        img.style.width  = sizePx + 'px';
-        img.style.height = sizePx + 'px';
+        img.style.width = px + 'px'; img.style.height = px + 'px';
       });
     }
 
     // ── State ──────────────────────────────────────────────────────────────────
-    const locations = {
-      imgRFRM: 'stimulus', imgSFSM: 'stimulus',
-      soundRFRM: 'stimulus', soundSFSM: 'stimulus'
-    };
-    let draggedId  = null;
-    let startTime  = null;
+    // 'stimulus' | 'left' | 'right'
+    const locations = { imgRFRM: 'stimulus', imgSFSM: 'stimulus', soundRFRM: 'stimulus', soundSFSM: 'stimulus' };
+    let draggedId = null, dragOffsetX = 0, dragOffsetY = 0;
+    let startTime = null;
 
     const urlParams       = new URLSearchParams(window.location.search);
     const prolificPid     = urlParams.get('PROLIFIC_PID') || 'unknown';
     const prolificStudy   = urlParams.get('STUDY_ID')     || 'unknown';
     const prolificSession = urlParams.get('SESSION_ID')   || 'unknown';
 
-    // ── Screen helper ──────────────────────────────────────────────────────────
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
@@ -465,33 +361,14 @@
       showScreen('task-screen');
     });
 
-    // ── DOM refs ───────────────────────────────────────────────────────────────
-    const stimulusItems = document.getElementById('stimulus-items');
-    const stimulusEmpty = document.getElementById('stimulus-empty');
-    const zoneLeft      = document.getElementById('zone-left');
-    const zoneRight     = document.getElementById('zone-right');
-
-    function zoneElForZone(zone) { return zone === 'left' ? zoneLeft : zoneRight; }
-
-    // ── Move item ──────────────────────────────────────────────────────────────
-    function moveItem(id, toZone) {
-      const fromZone = locations[id];
-      if (fromZone === toZone) return;
-      const el = document.getElementById('item-' + id);
-      if (toZone === 'stimulus') {
-        stimulusItems.appendChild(el);
-      } else {
-        zoneElForZone(toZone).appendChild(el);
-      }
-      locations[id] = toZone;
-      updateUI();
-    }
-
-    // ── Drag events ────────────────────────────────────────────────────────────
+    // ── Drag events on items ───────────────────────────────────────────────────
     document.querySelectorAll('.item').forEach(el => {
       el.addEventListener('dragstart', e => {
         draggedId = el.dataset.id;
         e.dataTransfer.effectAllowed = 'move';
+        const rect = el.getBoundingClientRect();
+        dragOffsetX = e.clientX - rect.left;
+        dragOffsetY = e.clientY - rect.top;
         setTimeout(() => el.classList.add('dragging'), 0);
       });
       el.addEventListener('dragend', () => {
@@ -500,18 +377,62 @@
       });
     });
 
-    function setupDropTarget(el, zone) {
-      el.addEventListener('dragover',  e => { e.preventDefault(); zoneElForZone(zone).classList.add('drag-over'); });
-      el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) zoneElForZone(zone).classList.remove('drag-over'); });
-      el.addEventListener('drop',      e => { e.preventDefault(); zoneElForZone(zone).classList.remove('drag-over'); if (draggedId) moveItem(draggedId, zone); });
-    }
+    // ── Canvas drop ────────────────────────────────────────────────────────────
+    const canvas    = document.getElementById('canvas');
+    const halfLeft  = document.getElementById('half-left');
+    const halfRight = document.getElementById('half-right');
 
-    setupDropTarget(zoneLeft,  'left');
-    setupDropTarget(zoneRight, 'right');
+    canvas.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!draggedId) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      const isLeft = (e.clientX - canvasRect.left) < canvasRect.width / 2;
+      halfLeft.classList.toggle('drag-over',  isLeft);
+      halfRight.classList.toggle('drag-over', !isLeft);
+    });
 
-    const stimBar = document.getElementById('stimulus-bar');
+    canvas.addEventListener('dragleave', e => {
+      if (!canvas.contains(e.relatedTarget)) {
+        halfLeft.classList.remove('drag-over');
+        halfRight.classList.remove('drag-over');
+      }
+    });
+
+    canvas.addEventListener('drop', e => {
+      e.preventDefault();
+      halfLeft.classList.remove('drag-over');
+      halfRight.classList.remove('drag-over');
+      if (!draggedId) return;
+
+      const canvasRect = canvas.getBoundingClientRect();
+      const x = e.clientX - canvasRect.left - dragOffsetX;
+      const y = e.clientY - canvasRect.top  - dragOffsetY;
+      const side = (e.clientX - canvasRect.left) < canvasRect.width / 2 ? 'left' : 'right';
+
+      const el = document.getElementById('item-' + draggedId);
+      el.style.position = 'absolute';
+      el.style.left = Math.max(0, x) + 'px';
+      el.style.top  = Math.max(0, y) + 'px';
+      canvas.appendChild(el);
+
+      locations[draggedId] = side;
+      updateUI();
+    });
+
+    // ── Stimulus bar drop (drag items back) ────────────────────────────────────
+    const stimBar   = document.getElementById('stimulus-bar');
+    const stimItems = document.getElementById('stimulus-items');
+
     stimBar.addEventListener('dragover', e => e.preventDefault());
-    stimBar.addEventListener('drop',     e => { e.preventDefault(); if (draggedId && locations[draggedId] !== 'stimulus') moveItem(draggedId, 'stimulus'); });
+    stimBar.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!draggedId || locations[draggedId] === 'stimulus') return;
+      const el = document.getElementById('item-' + draggedId);
+      el.style.position = ''; el.style.left = ''; el.style.top = '';
+      stimItems.appendChild(el);
+      locations[draggedId] = 'stimulus';
+      updateUI();
+    });
 
     // ── UI update ──────────────────────────────────────────────────────────────
     function countIn(zone, type) {
@@ -520,16 +441,28 @@
 
     function updateUI() {
       const inStimulus = Object.values(locations).filter(l => l === 'stimulus').length;
-      stimulusEmpty.style.display = inStimulus === 0 ? 'block' : 'none';
+      document.getElementById('stimulus-empty').style.display = inStimulus === 0 ? 'block' : 'none';
 
-      // Show/hide hint text in each zone
-      [zoneLeft, zoneRight].forEach(z => {
-        const hint = z.querySelector('.zone-hint');
-        if (hint) hint.style.display = z.querySelectorAll('.item').length === 0 ? 'block' : 'none';
-      });
+      const lImg = countIn('left','img'),  lSnd = countIn('left','sound');
+      const rImg = countIn('right','img'), rSnd = countIn('right','sound');
 
-      const lImg = countIn('left',  'img'),  lSnd = countIn('left',  'sound');
-      const rImg = countIn('right', 'img'),  rSnd = countIn('right', 'sound');
+      // Hints: hide when group has items
+      document.getElementById('hint-left').style.display  = (lImg + lSnd) === 0 ? 'block' : 'none';
+      document.getElementById('hint-right').style.display = (rImg + rSnd) === 0 ? 'block' : 'none';
+
+      let lError = lImg > 1 || lSnd > 1;
+      let rError = rImg > 1 || rSnd > 1;
+
+      halfLeft.classList.toggle('valid',   !lError && lImg === 1 && lSnd === 1);
+      halfLeft.classList.toggle('invalid',  lError);
+      halfRight.classList.toggle('valid',  !rError && rImg === 1 && rSnd === 1);
+      halfRight.classList.toggle('invalid', rError);
+
+      // Labels reflect state
+      const lLabel = document.getElementById('label-left');
+      const rLabel = document.getElementById('label-right');
+      lLabel.style.color = lError ? '#dc2626' : (!lError && lImg===1 && lSnd===1) ? '#16a34a' : '#9ca3af';
+      rLabel.style.color = rError ? '#dc2626' : (!rError && rImg===1 && rSnd===1) ? '#16a34a' : '#9ca3af';
 
       let error = null;
       if      (lImg > 1) error = 'Both images are in Group 1 — move one image to Group 2.';
@@ -540,13 +473,6 @@
       const allPlaced  = inStimulus === 0;
       const validPairs = lImg === 1 && lSnd === 1 && rImg === 1 && rSnd === 1;
       const ready      = allPlaced && validPairs && !error;
-
-      zoneLeft.classList.toggle('valid',   !error && lImg === 1 && lSnd === 1);
-      zoneLeft.classList.toggle('invalid', !!error && (lImg > 1 || lSnd > 1));
-      zoneLeft.classList.toggle('drag-over', false);
-      zoneRight.classList.toggle('valid',  !error && rImg === 1 && rSnd === 1);
-      zoneRight.classList.toggle('invalid', !!error && (rImg > 1 || rSnd > 1));
-      zoneRight.classList.toggle('drag-over', false);
 
       const notif     = document.getElementById('notification');
       const notifIcon = document.getElementById('notification-icon');
@@ -561,13 +487,11 @@
       } else {
         notif.className = 'info';  notifIcon.textContent = 'ℹ'; notifText.textContent = 'Each group needs exactly one image and one sound.';
       }
-
       document.getElementById('submit-btn').disabled = !ready;
     }
 
-    // ── Audio playback ─────────────────────────────────────────────────────────
+    // ── Audio ──────────────────────────────────────────────────────────────────
     let currentAudio = null;
-
     document.querySelectorAll('.play-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -601,8 +525,7 @@
 
       try {
         const res = await fetch('/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prolific_pid: prolificPid, study_id: prolificStudy, session_id: prolificSession,
             left_image: leftImg, left_sound: leftSnd, right_image: rightImg, right_sound: rightSnd,
@@ -621,8 +544,7 @@
         }, 1000);
       } catch {
         btn.disabled = false; btn.textContent = 'Next →';
-        const notif = document.getElementById('notification');
-        notif.className = 'error';
+        document.getElementById('notification').className = 'error';
         document.getElementById('notification-icon').textContent = '⚠';
         document.getElementById('notification-text').textContent = 'Submission failed — please try again.';
       }
