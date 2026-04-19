@@ -629,7 +629,7 @@
       container.innerHTML = '';
 
       // Image thumbnail at calibrated size (capped for the confirmation view)
-      const sizePx = Math.min(Math.round(IMAGE_MM * pxPerMm), 140);
+      const sizePx = Math.round(IMAGE_MM * pxPerMm);
       const img = document.createElement('img');
       img.src = imgId.replace('img', '') + '.png';
       img.style.width = sizePx + 'px';
