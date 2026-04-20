@@ -7,17 +7,9 @@ app.use(express.json());
 app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Experiment configuration ─────────────────────────────────────────────────
-// Define which image+sound pairing is congruent with your hypothesis.
-// Use the filenames WITHOUT extension (must match files in public/stimuli/).
-const CONGRUENT_PAIRING = {
-  image: 'RFRM',
-  sound: 'RFRM_sound'
-};
-
 // Replace with your Prolific completion URL once you have it.
 const PROLIFIC_COMPLETION_URL = 'https://app.prolific.com/submissions/complete?cc=XXXXXXXX';
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -25,10 +17,10 @@ const supabase = createClient(
 );
 
 function checkCongruency(leftImage, leftSound, rightImage, rightSound) {
-  const { image: cImg, sound: cSnd } = CONGRUENT_PAIRING;
-  const leftMatch  = leftImage  === cImg && leftSound  === cSnd;
-  const rightMatch = rightImage === cImg && rightSound === cSnd;
-  return leftMatch || rightMatch ? 'congruent' : 'incongruent';
+  // Congruent if either side has a matching same-name pair (e.g. RFRM + RFRM_sound, or SFSM + SFSM_sound).
+  const sameName = (img, snd) => img && snd && snd === img + '_sound';
+  return (sameName(leftImage, leftSound) || sameName(rightImage, rightSound))
+    ? 'congruent' : 'incongruent';
 }
 
 app.post('/submit', async (req, res) => {
