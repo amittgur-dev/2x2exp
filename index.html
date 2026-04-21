@@ -79,8 +79,8 @@
       gap: 10px;
     }
     #stimulus-bar-label {
-      font-size: .72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .09em; color: #9ca3af;
+      font-size: 1rem; font-weight: 700; color: #374151;
+      text-align: center;
     }
     #stimulus-items {
       display: flex; gap: 20px; flex-wrap: wrap;
@@ -283,8 +283,8 @@
     <h1>Matching Task</h1>
     <div class="instructions-box">
       <p>In this task you will see <strong>two images</strong> and hear <strong>two sounds</strong>.</p>
-      <p>Your task is to decide which image goes with which sound.</p>
-      <p>Drag each image and its matching sound to the <strong>same side</strong> of the screen — one pair on the left, the other on the right.</p>
+      <p><strong>Your task is to match each image with the sound that fits it best.</strong></p>
+      <p>Drag each image and its best-fitting sound to the <strong>same side</strong> of the screen — one pair on the left, the other on the right.</p>
       <p>You can listen to each sound as many times as you like before deciding.</p>
     </div>
     <button class="btn-primary" id="start-btn">Start</button>
@@ -294,7 +294,7 @@
   <div id="task-screen" class="screen">
 
     <div id="stimulus-bar">
-      <div id="stimulus-bar-label">Drag each image and its matching sound to the same side</div>
+      <div id="stimulus-bar-label">Match each image with the sound that fits it best — drag the pair to the same side</div>
       <div id="stimulus-items">
         <span id="stimulus-empty">All items placed — drag them back here to reposition.</span>
 
@@ -352,7 +352,7 @@
   <div id="confirm-screen" class="screen">
     <div id="confirm-header">
       <h2>Before you submit…</h2>
-      <p class="confirm-sub">Please listen to both sounds once more and confirm you are happy with your groupings.</p>
+      <p class="confirm-sub">Please listen to both sounds once more and confirm that each image is paired with <strong>the sound that fits it best</strong>.</p>
     </div>
 
     <div id="confirm-groups">
