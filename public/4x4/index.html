@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matching Task (4×4)</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #222;
+      background: #f0f2f5;
+    }
+
+    .screen { display: none; height: 100%; }
+    .screen.active { display: flex; flex-direction: column; }
+
+    .btn-primary {
+      padding: 14px 52px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-primary:hover    { background: #1d4ed8; }
+    .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    /* ── Calibration ─────────────────────────────────────────── */
+    #calibration-screen {
+      align-items: center; justify-content: center;
+      gap: 28px; padding: 40px 24px; text-align: center;
+    }
+    #calibration-screen h1 { font-size: 1.8rem; font-weight: 700; }
+    #calibration-screen .subtitle {
+      max-width: 500px; color: #555; line-height: 1.65; font-size: .97rem;
+    }
+    #card-wrapper { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    #calibration-card {
+      background: #fff; border: 2px solid #2563eb; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #9ca3af; font-size: .82rem; font-weight: 500; letter-spacing: .04em;
+      user-select: none;
+    }
+    #calib-slider { width: 340px; accent-color: #2563eb; }
+    #calib-hint   { font-size: .85rem; color: #9ca3af; }
+
+    /* ── Start screen ────────────────────────────────────────── */
+    #start-screen {
+      align-items: center; justify-content: center;
+      gap: 24px; padding: 40px 24px; text-align: center;
+    }
+    #start-screen h1 { font-size: 2rem; font-weight: 700; }
+    .instructions-box {
+      max-width: 560px; background: #fff; border-radius: 14px;
+      padding: 28px 32px; box-shadow: 0 2px 12px rgba(0,0,0,.09);
+      line-height: 1.75; color: #444; font-size: 1rem; text-align: left;
+    }
+    .instructions-box p { margin-bottom: 10px; }
+    .instructions-box p:last-child { margin-bottom: 0; }
+
+    /* ── Task screen ─────────────────────────────────────────── */
+    #task-screen { background: #e8ecf0; }
+
+    /* Stimulus bar */
+    #stimulus-bar {
+      flex-shrink: 0;
+      background: #fff;
+      border-bottom: 2px solid #d1d5db;
+      padding: 12px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    #stimulus-bar-label {
+      font-size: 1rem; font-weight: 700; color: #374151;
+      text-align: center;
+    }
+    #stimulus-items {
+      display: flex; gap: 14px; flex-wrap: wrap;
+      justify-content: center; align-items: center; width: 100%;
+      min-height: 20px;
+    }
+    #stimulus-empty { color: #bbb; font-size: .85rem; display: none; pointer-events: none; }
+
+    /* Canvas: free-position area with 2×2 grid of zones */
+    #canvas {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Quadrant backgrounds */
+    .quadrant {
+      position: absolute;
+      width: 50%; height: 50%;
+      transition: background .2s;
+      pointer-events: none;
+    }
+    #q-g1 { top: 0;    left: 0;    background: #f4f5f7; }
+    #q-g2 { top: 0;    right: 0;   background: #eef0f3; }
+    #q-g3 { bottom: 0; left: 0;    background: #eef0f3; }
+    #q-g4 { bottom: 0; right: 0;   background: #f4f5f7; }
+
+    .quadrant.invalid   { background: #fee2e2; }
+    .quadrant.drag-over { background: #dbeafe; }
+
+    /* Dividers */
+    #divider-h {
+      position: absolute; top: 50%; left: 0; right: 0;
+      height: 2px; background: #d1d5db; pointer-events: none;
+    }
+    #divider-v {
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 2px; background: #d1d5db; pointer-events: none;
+    }
+
+    /* Group labels */
+    .group-label {
+      position: absolute;
+      font-size: 1rem; font-weight: 700;
+      pointer-events: none;
+      transition: color .2s;
+      color: #9ca3af;
+      z-index: 1;
+    }
+    #label-g1 { top: 10px;               left: 14px; }
+    #label-g2 { top: 10px;               left: calc(50% + 14px); }
+    #label-g3 { top: calc(50% + 10px);   left: 14px; }
+    #label-g4 { top: calc(50% + 10px);   left: calc(50% + 14px); }
+
+    /* Zone hints */
+    .canvas-hint {
+      position: absolute;
+      font-size: .88rem; color: #c0c7d0;
+      pointer-events: none; text-align: center;
+      width: 170px;
+      transform: translate(-50%, -50%);
+    }
+    #hint-g1 { top: 25%; left: 25%; }
+    #hint-g2 { top: 25%; left: 75%; }
+    #hint-g3 { top: 75%; left: 25%; }
+    #hint-g4 { top: 75%; left: 75%; }
+
+    /* Draggable items */
+    .item {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: grab;
+      user-select: none;
+      transition: opacity .15s;
+      z-index: 10;
+    }
+    .item.dragging { opacity: .3; cursor: grabbing; }
+
+    .image-item { padding: 0; background: none; border: none; }
+    .image-item img { object-fit: contain; background: transparent; display: block; }
+
+    .sound-item { background: none; border: none; padding: 0; }
+    .sound-icon {
+      width: 90px; height: 90px;
+      border-radius: 10px;
+      background: #eff6ff;
+      border: 2px solid #bfdbfe;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 6px;
+    }
+    .sound-icon svg  { width: 28px; height: 28px; color: #2563eb; }
+    .play-btn {
+      padding: 4px 10px; font-size: .72rem; font-weight: 600;
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 20px; cursor: pointer;
+      transition: background .15s; pointer-events: all; white-space: nowrap;
+    }
+    .play-btn:hover   { background: #1d4ed8; }
+    .play-btn.playing { background: #dc2626; }
+
+    /* Bottom bar */
+    #bottom-bar {
+      flex-shrink: 0; background: #fff;
+      border-top: 2px solid #d1d5db;
+      padding: 12px 32px;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
+    }
+    #notification {
+      flex: 1; display: flex; align-items: center;
+      gap: 8px; font-size: 1.05rem; font-weight: 700; min-height: 1.4em;
+    }
+    #notification.error { color: #b91c1c; }
+    #notification.ready { color: #15803d; }
+    #notification.info  { color: #6b7280; }
+
+    /* Confirmation screen */
+    #confirm-screen {
+      flex-direction: column; align-items: stretch; justify-content: flex-start;
+      padding: 0; background: #e8ecf0;
+    }
+    #confirm-header {
+      flex-shrink: 0; background: #fff; border-bottom: 2px solid #d1d5db;
+      padding: 16px 32px; text-align: center;
+    }
+    #confirm-header h2 { font-size: 1.4rem; font-weight: 700; }
+    .confirm-sub { color: #555; line-height: 1.6; font-size: .95rem; margin-top: 6px; }
+
+    #confirm-groups {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      overflow: hidden;
+      position: relative;
+    }
+    .confirm-cell {
+      position: relative;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px; padding: 16px;
+      border-right: 2px solid #d1d5db;
+      border-bottom: 2px solid #d1d5db;
+    }
+    .confirm-cell:nth-child(2) { border-right: none; }
+    .confirm-cell:nth-child(3),
+    .confirm-cell:nth-child(4) { border-bottom: none; }
+    .confirm-cell:nth-child(4) { border-right: none; }
+
+    .confirm-group-title {
+      position: absolute; top: 8px; left: 12px;
+      font-weight: 700; font-size: .95rem; color: #9ca3af;
+      pointer-events: none;
+    }
+    .confirm-cell img { object-fit: contain; background: transparent; display: block; }
+    .confirm-cell .sound-icon { width: 80px; height: 80px; }
+    .confirm-cell .sound-icon svg { width: 26px; height: 26px; }
+
+    #confirm-footer {
+      flex-shrink: 0; background: #fff; border-top: 2px solid #d1d5db;
+      padding: 12px 32px; display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
+    }
+    #confirm-question { flex: 1; font-size: 1.05rem; font-weight: 700; color: #6b7280; }
+    #confirm-question.ready { color: #222; }
+    #confirm-buttons { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn-secondary {
+      padding: 12px 28px; font-size: 1rem; font-weight: 600;
+      background: #fff; color: #374151;
+      border: 2px solid #d1d5db; border-radius: 8px;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-secondary:hover { background: #f3f4f6; }
+
+    /* End screen */
+    #end-screen {
+      align-items: center; justify-content: center;
+      gap: 16px; text-align: center; padding: 40px 24px;
+    }
+    #end-screen h1 { font-size: 2rem; }
+    #end-screen p  { color: #555; }
+    #redirect-msg  { font-size: .9rem; color: #888; }
+  </style>
+</head>
+<body>
+
+  <!-- CALIBRATION -->
+  <div id="calibration-screen" class="screen active">
+    <h1>Screen Calibration</h1>
+    <p class="subtitle">
+      To make sure everyone sees the images at the same size, please grab a credit card (or any bank card) and place it next to your screen.<br><br>
+      Use the slider to resize the rectangle below until it matches the size of your card exactly.
+    </p>
+    <div id="card-wrapper">
+      <div id="calibration-card">CREDIT CARD SIZE</div>
+      <input type="range" id="calib-slider" min="150" max="700" value="323">
+      <span id="calib-hint">Drag the slider until the rectangle matches your card</span>
+    </div>
+    <button class="btn-primary" id="calib-confirm-btn">Confirm &amp; Continue</button>
+  </div>
+
+  <!-- START -->
+  <div id="start-screen" class="screen">
+    <h1>Matching Task</h1>
+    <div class="instructions-box">
+      <p>In this task you will see <strong>four images</strong> and hear <strong>four sounds</strong>.</p>
+      <p><strong>Your task is to match each image with the sound that fits it best.</strong></p>
+      <p>Drag each image and its best-fitting sound to the <strong>same group zone</strong>. There are four zones — one image and one sound in each.</p>
+      <p>You can listen to each sound as many times as you like before deciding.</p>
+    </div>
+    <button class="btn-primary" id="start-btn">Start</button>
+  </div>
+
+  <!-- TASK -->
+  <div id="task-screen" class="screen">
+
+    <div id="stimulus-bar">
+      <div id="stimulus-bar-label">Match each image with the sound that fits it best — drag the pair into the same zone</div>
+      <div id="stimulus-items">
+        <span id="stimulus-empty">All items placed — drag them back here to reposition.</span>
+
+        <div class="item image-item" id="item-imgRFRM" draggable="true" data-type="image" data-id="imgRFRM">
+          <img src="RFRM.png" onerror="this.style.background='#dde3ea'" alt="">
+        </div>
+        <div class="item image-item" id="item-imgRFSM" draggable="true" data-type="image" data-id="imgRFSM">
+          <img src="RFSM.png" onerror="this.style.background='#dde3ea'" alt="">
+        </div>
+        <div class="item image-item" id="item-imgSFSM" draggable="true" data-type="image" data-id="imgSFSM">
+          <img src="SFSM.png" onerror="this.style.background='#c7d2e0'" alt="">
+        </div>
+        <div class="item image-item" id="item-imgSFRM" draggable="true" data-type="image" data-id="imgSFRM">
+          <img src="SFRM.png" onerror="this.style.background='#c7d2e0'" alt="">
+        </div>
+
+        <div class="item sound-item" id="item-soundRFRM" draggable="true" data-type="sound" data-id="soundRFRM">
+          <div class="sound-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <button class="play-btn" data-audio="soundRFRM">&#9654; Play</button>
+          </div>
+        </div>
+        <div class="item sound-item" id="item-soundRFSM" draggable="true" data-type="sound" data-id="soundRFSM">
+          <div class="sound-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <button class="play-btn" data-audio="soundRFSM">&#9654; Play</button>
+          </div>
+        </div>
+        <div class="item sound-item" id="item-soundSFSM" draggable="true" data-type="sound" data-id="soundSFSM">
+          <div class="sound-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <button class="play-btn" data-audio="soundSFSM">&#9654; Play</button>
+          </div>
+        </div>
+        <div class="item sound-item" id="item-soundSFRM" draggable="true" data-type="sound" data-id="soundSFRM">
+          <div class="sound-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <button class="play-btn" data-audio="soundSFRM">&#9654; Play</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Free-position canvas with 4 zones -->
+    <div id="canvas">
+      <div class="quadrant" id="q-g1"></div>
+      <div class="quadrant" id="q-g2"></div>
+      <div class="quadrant" id="q-g3"></div>
+      <div class="quadrant" id="q-g4"></div>
+      <div id="divider-h"></div>
+      <div id="divider-v"></div>
+      <span class="group-label" id="label-g1">Group 1</span>
+      <span class="group-label" id="label-g2">Group 2</span>
+      <span class="group-label" id="label-g3">Group 3</span>
+      <span class="group-label" id="label-g4">Group 4</span>
+      <span class="canvas-hint" id="hint-g1">Drag one image + one sound here</span>
+      <span class="canvas-hint" id="hint-g2">Drag one image + one sound here</span>
+      <span class="canvas-hint" id="hint-g3">Drag one image + one sound here</span>
+      <span class="canvas-hint" id="hint-g4">Drag one image + one sound here</span>
+    </div>
+
+    <div id="bottom-bar">
+      <div id="notification" class="info">
+        <span id="notification-icon">&#9432;</span>
+        <span id="notification-text">Drag the stimuli from the top into the four groups.</span>
+      </div>
+      <button class="btn-primary" id="submit-btn" disabled>Next &rarr;</button>
+    </div>
+
+  </div>
+
+  <!-- CONFIRMATION -->
+  <div id="confirm-screen" class="screen">
+    <div id="confirm-header">
+      <h2>Before you submit…</h2>
+      <p class="confirm-sub">Please listen to all four sounds once more and confirm that each image is paired with <strong>the sound that fits it best</strong>.</p>
+    </div>
+
+    <div id="confirm-groups">
+      <div class="confirm-cell">
+        <div class="confirm-group-title">Group 1</div>
+        <div id="confirm-g1-content" class="confirm-cell-content"></div>
+      </div>
+      <div class="confirm-cell">
+        <div class="confirm-group-title">Group 2</div>
+        <div id="confirm-g2-content" class="confirm-cell-content"></div>
+      </div>
+      <div class="confirm-cell">
+        <div class="confirm-group-title">Group 3</div>
+        <div id="confirm-g3-content" class="confirm-cell-content"></div>
+      </div>
+      <div class="confirm-cell">
+        <div class="confirm-group-title">Group 4</div>
+        <div id="confirm-g4-content" class="confirm-cell-content"></div>
+      </div>
+    </div>
+
+    <div id="confirm-footer">
+      <div id="confirm-question">Please play all four sounds above before submitting.</div>
+      <div id="confirm-buttons">
+        <button class="btn-secondary" id="goback-btn">&#8592; Go back and change</button>
+        <button class="btn-primary"   id="confirm-submit-btn" disabled>Yes, submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- END -->
+  <div id="end-screen" class="screen">
+    <h1>Thank you!</h1>
+    <p>Your response has been recorded.</p>
+    <p id="redirect-msg">You will be redirected to Prolific in a moment...</p>
+  </div>
+
+  <audio id="audio-soundRFRM" src="RFRM.wav" style="display:none"></audio>
+  <audio id="audio-soundRFSM" src="RFSM.wav" style="display:none"></audio>
+  <audio id="audio-soundSFSM" src="SFSM.wav" style="display:none"></audio>
+  <audio id="audio-soundSFRM" src="SFRM.wav" style="display:none"></audio>
+
+  <script>
+    // ── Config ─────────────────────────────────────────────────────────────────
+    const STIMULI    = ['RFRM', 'RFSM', 'SFSM', 'SFRM'];
+    const GROUPS     = ['g1', 'g2', 'g3', 'g4'];
+    const CARD_W_MM  = 85.6, CARD_H_MM = 54.0;
+    const IMAGE_MM   = 50; // smaller than 2×2 (68mm) — 4 items per row + 4 zones
+
+    let pxPerMm = 96 / 25.4;
+
+    // ── Calibration ────────────────────────────────────────────────────────────
+    const calibCard   = document.getElementById('calibration-card');
+    const calibSlider = document.getElementById('calib-slider');
+
+    function applySlider(val) {
+      const w = parseInt(val), h = Math.round(w * CARD_H_MM / CARD_W_MM);
+      calibCard.style.width = w + 'px'; calibCard.style.height = h + 'px';
+    }
+    applySlider(calibSlider.value);
+    calibSlider.addEventListener('input', () => applySlider(calibSlider.value));
+
+    document.getElementById('calib-confirm-btn').addEventListener('click', () => {
+      pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
+      applyImageSize();
+      showScreen('start-screen');
+    });
+
+    function applyImageSize() {
+      const px = Math.round(IMAGE_MM * pxPerMm);
+      document.querySelectorAll('.image-item img').forEach(img => {
+        img.style.width = px + 'px'; img.style.height = px + 'px';
+      });
+    }
+
+    // ── State ──────────────────────────────────────────────────────────────────
+    // Each entry: 'stimulus' | 'g1' | 'g2' | 'g3' | 'g4'
+    const locations = {};
+    STIMULI.forEach(s => { locations['img' + s] = 'stimulus'; locations['sound' + s] = 'stimulus'; });
+
+    let draggedId = null, dragOffsetX = 0, dragOffsetY = 0;
+    let startTime = null;
+
+    const urlParams       = new URLSearchParams(window.location.search);
+    const prolificPid     = urlParams.get('PROLIFIC_PID') || 'unknown';
+    const prolificStudy   = urlParams.get('STUDY_ID')     || 'unknown';
+    const prolificSession = urlParams.get('SESSION_ID')   || 'unknown';
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+      startTime = Date.now();
+      showScreen('task-screen');
+    });
+
+    // ── Drag events on items ───────────────────────────────────────────────────
+    document.querySelectorAll('.item').forEach(el => {
+      el.addEventListener('dragstart', e => {
+        draggedId = el.dataset.id;
+        e.dataTransfer.effectAllowed = 'move';
+        const rect = el.getBoundingClientRect();
+        dragOffsetX = e.clientX - rect.left;
+        dragOffsetY = e.clientY - rect.top;
+        setTimeout(() => el.classList.add('dragging'), 0);
+      });
+      el.addEventListener('dragend', () => {
+        el.classList.remove('dragging');
+        draggedId = null;
+      });
+    });
+
+    // ── Canvas drop ────────────────────────────────────────────────────────────
+    const canvas    = document.getElementById('canvas');
+    const quadrants = { g1: document.getElementById('q-g1'), g2: document.getElementById('q-g2'),
+                        g3: document.getElementById('q-g3'), g4: document.getElementById('q-g4') };
+
+    function quadrantFor(relX, relY, rect) {
+      const isTop  = relY < rect.height / 2;
+      const isLeft = relX < rect.width  / 2;
+      return isTop ? (isLeft ? 'g1' : 'g2') : (isLeft ? 'g3' : 'g4');
+    }
+
+    canvas.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (!draggedId) return;
+      const rect = canvas.getBoundingClientRect();
+      const g = quadrantFor(e.clientX - rect.left, e.clientY - rect.top, rect);
+      GROUPS.forEach(k => quadrants[k].classList.toggle('drag-over', k === g));
+    });
+
+    canvas.addEventListener('dragleave', e => {
+      if (!canvas.contains(e.relatedTarget)) {
+        GROUPS.forEach(k => quadrants[k].classList.remove('drag-over'));
+      }
+    });
+
+    canvas.addEventListener('drop', e => {
+      e.preventDefault();
+      GROUPS.forEach(k => quadrants[k].classList.remove('drag-over'));
+      if (!draggedId) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left - dragOffsetX;
+      const y = e.clientY - rect.top  - dragOffsetY;
+      const g = quadrantFor(e.clientX - rect.left, e.clientY - rect.top, rect);
+
+      const el = document.getElementById('item-' + draggedId);
+      el.style.position = 'absolute';
+      el.style.left = Math.max(0, x) + 'px';
+      el.style.top  = Math.max(0, y) + 'px';
+      canvas.appendChild(el);
+
+      locations[draggedId] = g;
+      updateUI();
+    });
+
+    // ── Stimulus bar drop (drag items back) ────────────────────────────────────
+    const stimBar   = document.getElementById('stimulus-bar');
+    const stimItems = document.getElementById('stimulus-items');
+
+    stimBar.addEventListener('dragover', e => e.preventDefault());
+    stimBar.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!draggedId || locations[draggedId] === 'stimulus') return;
+      const el = document.getElementById('item-' + draggedId);
+      el.style.position = ''; el.style.left = ''; el.style.top = '';
+      stimItems.appendChild(el);
+      locations[draggedId] = 'stimulus';
+      updateUI();
+    });
+
+    // ── UI update ──────────────────────────────────────────────────────────────
+    function countIn(zone, type) {
+      return Object.entries(locations).filter(([id, loc]) => loc === zone && id.startsWith(type)).length;
+    }
+
+    function updateUI() {
+      const inStimulus = Object.values(locations).filter(l => l === 'stimulus').length;
+      document.getElementById('stimulus-empty').style.display = inStimulus === 0 ? 'block' : 'none';
+
+      const counts = {};
+      let error = null;
+      GROUPS.forEach(g => {
+        counts[g] = { imgs: countIn(g, 'img'), snds: countIn(g, 'sound') };
+      });
+
+      // Hide hints for non-empty groups; color invalid zones red
+      GROUPS.forEach(g => {
+        const total = counts[g].imgs + counts[g].snds;
+        document.getElementById('hint-' + g).style.display = total === 0 ? 'block' : 'none';
+        const invalid = counts[g].imgs > 1 || counts[g].snds > 1;
+        quadrants[g].classList.toggle('invalid', invalid);
+        const label = document.getElementById('label-' + g);
+        label.style.color = invalid ? '#dc2626' : '#9ca3af';
+      });
+
+      for (const g of GROUPS) {
+        if (counts[g].imgs > 1) { error = `Group ${g[1]} has ${counts[g].imgs} images — each group needs exactly one image.`; break; }
+        if (counts[g].snds > 1) { error = `Group ${g[1]} has ${counts[g].snds} sounds — each group needs exactly one sound.`; break; }
+      }
+
+      const allPlaced  = inStimulus === 0;
+      const validPairs = GROUPS.every(g => counts[g].imgs === 1 && counts[g].snds === 1);
+      const bothHeard  = taskSoundsPlayed.size >= 4;
+      const ready      = allPlaced && validPairs && !error;
+
+      const notif     = document.getElementById('notification');
+      const notifIcon = document.getElementById('notification-icon');
+      const notifText = document.getElementById('notification-text');
+
+      if (error) {
+        notif.className = 'error'; notifIcon.textContent = '⚠'; notifText.textContent = error;
+      } else if (ready && !bothHeard) {
+        notif.className = 'info';  notifIcon.textContent = 'ℹ'; notifText.textContent = 'Please listen to all four sounds before continuing.';
+      } else if (ready) {
+        notif.className = 'ready'; notifIcon.textContent = '✓'; notifText.textContent = "Each group has one image and one sound. Press Next when you're happy with your answer.";
+      } else if (!allPlaced) {
+        notif.className = 'info';  notifIcon.textContent = 'ℹ'; notifText.textContent = 'Drag all eight stimuli into the four groups.';
+      } else {
+        notif.className = 'info';  notifIcon.textContent = 'ℹ'; notifText.textContent = 'Each of the four groups needs exactly one image and one sound.';
+      }
+      document.getElementById('submit-btn').disabled = !(ready && bothHeard);
+    }
+
+    // ── Audio ──────────────────────────────────────────────────────────────────
+    let currentAudio = null;
+    const taskSoundsPlayed    = new Set();
+    const confirmSoundsPlayed = new Set();
+
+    document.querySelectorAll('.play-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (currentAudio && !currentAudio.paused) return;
+        const audio = document.getElementById('audio-' + btn.dataset.audio);
+        if (!audio) return;
+        audio.play().catch(() => {});
+        btn.classList.add('playing'); btn.innerHTML = '&#9654; Playing&hellip;';
+        currentAudio = audio;
+        audio.onended = () => {
+          btn.classList.remove('playing'); btn.innerHTML = '&#9654; Play';
+          currentAudio = null;
+          taskSoundsPlayed.add(btn.dataset.audio);
+          updateUI();
+        };
+      });
+    });
+
+    // ── Confirmation screen ────────────────────────────────────────────────────
+    document.getElementById('submit-btn').addEventListener('click', () => {
+      confirmSoundsPlayed.clear();
+      updateConfirmBtn();
+
+      GROUPS.forEach(g => {
+        const img = Object.keys(locations).find(id => locations[id] === g && id.startsWith('img'));
+        const snd = Object.keys(locations).find(id => locations[id] === g && id.startsWith('sound'));
+        buildConfirmGroup('confirm-' + g + '-content', img, snd);
+      });
+
+      showScreen('confirm-screen');
+    });
+
+    function updateConfirmBtn() {
+      const btn   = document.getElementById('confirm-submit-btn');
+      const heard = confirmSoundsPlayed.size >= 4;
+      btn.disabled = !heard;
+      const q = document.getElementById('confirm-question');
+      if (!heard) {
+        q.textContent = `Please play all four sounds above before submitting (${confirmSoundsPlayed.size}/4 played).`;
+        q.classList.remove('ready');
+      } else {
+        q.textContent = 'Are you sure about your choices?';
+        q.classList.add('ready');
+      }
+    }
+
+    function buildConfirmGroup(containerId, imgId, sndId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.alignItems = 'center';
+      container.style.gap = '12px';
+
+      const sizePx = Math.round(IMAGE_MM * pxPerMm);
+      const img = document.createElement('img');
+      img.src = imgId.replace('img', '') + '.png';
+      img.style.width  = sizePx + 'px';
+      img.style.height = sizePx + 'px';
+      img.style.objectFit = 'contain';
+      container.appendChild(img);
+
+      const audio = document.getElementById('audio-' + sndId);
+      const icon = document.createElement('div');
+      icon.className = 'sound-icon';
+      icon.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+        <button class="play-btn">&#9654; Play</button>`;
+      const playBtn = icon.querySelector('.play-btn');
+      playBtn.addEventListener('click', () => {
+        if (currentAudio && !currentAudio.paused) return;
+        audio.play().catch(() => {});
+        playBtn.classList.add('playing'); playBtn.innerHTML = '&#9654; Playing&hellip;';
+        currentAudio = audio;
+        audio.onended = () => {
+          playBtn.classList.remove('playing'); playBtn.innerHTML = '&#9654; Play';
+          currentAudio = null;
+          confirmSoundsPlayed.add(sndId);
+          updateConfirmBtn();
+        };
+      });
+      container.appendChild(icon);
+    }
+
+    document.getElementById('goback-btn').addEventListener('click', () => {
+      if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
+      document.querySelectorAll('.play-btn.playing').forEach(b => { b.classList.remove('playing'); b.innerHTML = '&#9654; Play'; });
+      showScreen('task-screen');
+    });
+
+    // ── Submit ─────────────────────────────────────────────────────────────────
+    document.getElementById('confirm-submit-btn').addEventListener('click', async () => {
+      if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
+      const btn = document.getElementById('confirm-submit-btn');
+      btn.disabled = true; btn.textContent = 'Saving...';
+
+      const fmtImg = id => id.replace(/^img/, '');
+      const fmtSnd = id => id.replace(/^sound/, '') + '_sound';
+
+      const payload = {
+        prolific_pid: prolificPid, study_id: prolificStudy, session_id: prolificSession,
+        response_time_ms: Date.now() - startTime,
+        px_per_mm: Math.round(pxPerMm * 100) / 100
+      };
+      GROUPS.forEach(g => {
+        const img = Object.keys(locations).find(id => locations[id] === g && id.startsWith('img'));
+        const snd = Object.keys(locations).find(id => locations[id] === g && id.startsWith('sound'));
+        payload[g + '_image'] = fmtImg(img);
+        payload[g + '_sound'] = fmtSnd(snd);
+      });
+
+      try {
+        const res = await fetch('/submit-4x4', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        showScreen('end-screen');
+        let secs = 5;
+        const msg = document.getElementById('redirect-msg');
+        const tick = setInterval(() => {
+          secs--;
+          msg.textContent = `You will be redirected to Prolific in ${secs} second${secs !== 1 ? 's' : ''}...`;
+          if (secs <= 0) { clearInterval(tick); window.location.href = data.completion_url; }
+        }, 1000);
+      } catch {
+        btn.disabled = false; btn.textContent = 'Yes, submit';
+        document.getElementById('notification').className = 'error';
+      }
+    });
+  </script>
+</body>
+</html>
