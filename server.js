@@ -9,8 +9,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Replace with your Prolific completion URL once you have it.
 const PROLIFIC_COMPLETION_URL = 'https://app.prolific.com/submissions/complete?cc=C1K5H2UT';
-// Prolific completion URL for the 4x4 study (add once you have it).
-const PROLIFIC_COMPLETION_URL_4X4 = 'https://app.prolific.com/submissions/complete?cc=PLACEHOLDER_4X4';
+// Prolific completion URL for the 4x4 study (duplicated study, same code as the 2x2 study).
+const PROLIFIC_COMPLETION_URL_4X4 = 'https://app.prolific.com/submissions/complete?cc=C1K5H2UT';
 
 
 const supabase = createClient(
@@ -94,6 +94,66 @@ app.post('/submit-4x4', async (req, res) => {
   }
 
   res.json({ success: true, completion_url: PROLIFIC_COMPLETION_URL_4X4 });
+});
+
+// ── Rating study (/rating/) ──────────────────────────────────────────────────
+// Completion code comes from the environment, never from source (public repo).
+// A missing/malformed code must be LOUD at boot: without it participants finish
+// the task and have no way back to Prolific. We warn rather than exit, because
+// this same process also serves the 2x2 and 4x4 studies.
+const RATING_CC = process.env.PROLIFIC_CC_RATING;
+let ratingCompletionCode = null;
+
+if (!RATING_CC) {
+  console.error('WARNING: PROLIFIC_CC_RATING is not set — /rating/ participants will NOT be redirected to Prolific.');
+} else if (!/^[A-Za-z0-9]{4,20}$/.test(RATING_CC)) {
+  console.error(`WARNING: PROLIFIC_CC_RATING looks wrong (${RATING_CC}). Set the bare completion code, not a full URL.`);
+} else {
+  ratingCompletionCode = RATING_CC;
+  console.log('Rating study completion code loaded.');
+}
+
+const PROLIFIC_COMPLETION_URL_RATING = ratingCompletionCode
+  ? `https://app.prolific.com/submissions/complete?cc=${ratingCompletionCode}`
+  : null;
+
+// Explicit whitelist: never spread raw client JSON into an insert — one unexpected
+// key makes Supabase reject the whole batch and the session is lost.
+const RATING_COLUMNS = [
+  'prolific_pid', 'study_id', 'session_id',
+  'trial_index', 'direction', 'block_order', 'block_position',
+  'reference', 'comparison', 'position',
+  'rating', 'slider_start', 'ref_plays', 'comp_plays',
+  'trial_rt_ms', 'px_per_mm'
+];
+
+app.post('/submit-ratings', async (req, res) => {
+  const { ratings } = req.body;
+
+  if (!Array.isArray(ratings) || ratings.length !== 32) {
+    const n = Array.isArray(ratings) ? ratings.length : 'none';
+    return res.status(400).json({ success: false, error: `Expected 32 rating rows, got ${n}` });
+  }
+
+  const timestamp = new Date().toISOString();
+  const rows = ratings.map(r => {
+    const row = { timestamp };
+    RATING_COLUMNS.forEach(k => { row[k] = r[k] === undefined ? null : r[k]; });
+    return row;
+  });
+
+  const { error } = await supabase.from('ratings').insert(rows);
+
+  if (error) {
+    console.error('Supabase error (ratings):', error);
+    return res.status(500).json({ success: false, error: 'Failed to save data' });
+  }
+
+  res.json({
+    success: true,
+    completion_url: PROLIFIC_COMPLETION_URL_RATING,
+    completion_code: ratingCompletionCode
+  });
 });
 
 const PORT = process.env.PORT || 3000;

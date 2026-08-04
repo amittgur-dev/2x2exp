@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Similarity Rating Task</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f7f7f5; color: #1f2937; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .screen { display: none; width: 100%; max-width: 860px; text-align: center; }
+    .screen.active { display: block; }
+    h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 14px; }
+    .subtitle { color: #6b7280; margin-bottom: 22px; }
+    .box { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+           padding: 26px 30px; margin: 0 auto 22px; text-align: left; max-width: 720px;
+           box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+    .box p, .box li { margin-bottom: 10px; line-height: 1.55; }
+    .box ul { padding-left: 22px; }
+    .btn-primary { background: #2563eb; color: #fff; border: none; border-radius: 10px;
+                   padding: 12px 34px; font-size: 1.05rem; cursor: pointer; }
+    .btn-primary:disabled { background: #b9c4d2; cursor: default; }
+    .small { font-size: .85rem; color: #6b7280; }
+
+    /* consent */
+    .consent-check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; }
+    .consent-check input { margin-top: 4px; transform: scale(1.2); }
+
+    /* calibration (mirrors the 4x4 task) */
+    #calibration-card { background: #2563eb; color: rgba(255,255,255,.85); display: flex;
+      align-items: center; justify-content: center; border-radius: 8px; font-size: .8rem;
+      letter-spacing: .08em; margin: 0 auto 16px; }
+    #calib-slider { width: 340px; accent-color: #2563eb; }
+    #calib-hint { font-size: .85rem; color: #9ca3af; display: block; margin: 8px 0 18px; }
+
+    /* rating trial */
+    #ref-panel { margin-bottom: 8px; }
+    #ref-image { display: block; margin: 0 auto; }
+    .play-btn { background: #fff; border: 2px solid #2563eb; color: #2563eb; border-radius: 8px;
+                padding: 8px 18px; font-size: .95rem; cursor: pointer; }
+    .play-btn.big { font-size: 1.05rem; padding: 12px 26px; }
+    .play-btn.played { border-color: #2e7d5e; color: #2e7d5e; }
+    .play-btn.playing { background: #dc2626; border-color: #dc2626; color: #fff; cursor: default; }
+    .comp-list { display: flex; flex-direction: column; gap: 14px; max-width: 720px; margin: 18px auto; }
+    .comp-row { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+                padding: 14px 18px; display: flex; align-items: center; gap: 18px; }
+    .comp-row .stim-cell { flex: 0 0 auto; width: 130px; display: flex; justify-content: center; }
+    .comp-row img { display: block; }
+    .slider-cell { flex: 1; text-align: left; }
+
+    /* image comparisons: 2x2 grid so all four stay visible and nothing overflows */
+    .comp-list.grid { display: grid; grid-template-columns: repeat(2, auto);
+                      justify-content: center; align-items: start;
+                      gap: 14px; max-width: 100%; width: max-content; }
+    .comp-cell { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+                 padding: 14px 16px; display: flex; flex-direction: column;
+                 align-items: center; gap: 10px; }
+    .comp-cell img { display: block; }
+    .comp-cell .slider-cell { flex: none; width: 100%; min-width: 260px; }
+    .slider-cell input[type=range] { width: 100%; accent-color: #2563eb; }
+    /* neutral start: stays grey until the participant actually sets a value */
+    .slider-cell input[type=range].untouched { accent-color: #c3c9d4; }
+    .slider-cell.locked { opacity: .38; pointer-events: none; }
+    .anchors { display: flex; justify-content: space-between; font-size: .78rem; color: #6b7280; }
+    .rating-val { font-weight: 700; color: #2563eb; min-width: 2.5em; display: inline-block; }
+    .rating-val.unset { color: #9ca3af; font-weight: 400; }
+    #trial-progress { color: #6b7280; font-size: .9rem; margin-bottom: 10px; }
+    #trial-gate { font-size: 1.05rem; font-weight: 700; color: #6b7280; margin: 12px 0 16px; min-height: 1.4em; }
+    #trial-gate.ready { color: #15803d; }
+    #trial-gate.listening { color: #b45309; }
+    #start-hint { font-size: 1.05rem; font-weight: 700; color: #6b7280; margin-top: 10px; }
+    #block-screen .box { text-align: center; max-width: 560px; }
+    #block-screen .box p { margin-bottom: 0; font-size: 1.05rem; }
+    #resume-screen .box { text-align: center; max-width: 560px; }
+    #resume-screen .box p { margin-bottom: 0; font-size: 1.05rem; }
+    #submit-status { font-size: 1.05rem; font-weight: 700; margin-top: 14px; min-height: 1.4em; }
+    #submit-status.error { color: #b91c1c; }
+    #submit-status.info  { color: #6b7280; }
+    #retry-btn { margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ CONSENT ═══ -->
+  <div id="consent-screen" class="screen active">
+    <h1>Participant Information &amp; Consent</h1>
+    <div class="box">
+      <p>You are invited to take part in a scientific study on the perception of sounds and images, conducted by [RESEARCHER NAMES], [INSTITUTIONS]. Please read the following before deciding to participate.</p>
+      <ul>
+        <li><strong>Procedure.</strong> You will view images and listen to short sounds, and rate how similar they seem to you. The session takes about [X] minutes.</li>
+        <li><strong>Voluntary participation.</strong> Taking part is entirely voluntary. You may withdraw at any moment, without giving a reason and without any penalty, by closing this window.</li>
+        <li><strong>Use of data.</strong> The data obtained in this session will be used for a scientific study and may be published in anonymized, aggregated form in scientific journals and presentations.</li>
+        <li><strong>Anonymity.</strong> No identifying information is collected. Your responses are stored under your Prolific identifier only, which is removed from the dataset before analysis and publication.</li>
+        <li><strong>Data storage.</strong> Data are stored securely on servers within the EU and retained in accordance with the data-management policy of [INSTITUTION].</li>
+        <li><strong>Risks.</strong> There are no known risks beyond those of ordinary computer use. Please set your volume to a comfortable level.</li>
+        <li><strong>Contact.</strong> Questions may be addressed to [CONTACT EMAIL]. This study has been approved by [ETHICS COMMITTEE, PROTOCOL NO.].</li>
+      </ul>
+      <div class="consent-check">
+        <input type="checkbox" id="consent-box">
+        <label for="consent-box">I confirm that I am at least 18 years old, that I have read and understood the information above, and that I consent to participate in this study.</label>
+      </div>
+    </div>
+    <button class="btn-primary" id="consent-btn" disabled>I consent — continue</button>
+  </div>
+
+  <!-- ═══ CALIBRATION ═══ -->
+  <div id="calibration-screen" class="screen">
+    <h1>Screen Calibration</h1>
+    <p class="subtitle">To make sure everyone sees the images at the same size, please grab a credit card (or any bank card) and place it next to your screen.<br>
+      Use the slider to resize the rectangle below until it matches the size of your card exactly.</p>
+    <div id="calibration-card">CREDIT CARD SIZE</div>
+    <input type="range" id="calib-slider" min="150" max="700" value="323">
+    <span id="calib-hint">Drag the slider until the rectangle matches your card</span><br>
+    <button class="btn-primary" id="calib-confirm-btn">Confirm &amp; Continue</button>
+  </div>
+
+  <!-- ═══ INSTRUCTIONS ═══ -->
+  <div id="start-screen" class="screen">
+    <h1>Similarity Rating Task</h1>
+    <div class="box">
+      <p>Each round shows a <strong>reference</strong> — an image or a sound — with four items of the other kind.</p>
+      <p><strong>Rate how similar each item is to the reference</strong> by moving its slider.</p>
+      <p>There are no right or wrong answers; we want your impression. Each sound must finish playing before its slider unlocks — replay as often as you like.</p>
+      <p>Two parts, 4 rounds each. First, check your volume:</p>
+      <p style="text-align:center"><button class="play-btn" id="sound-test-btn">&#9654; Play test sound</button></p>
+    </div>
+    <button class="btn-primary" id="start-btn" disabled>Start</button>
+    <p class="small" id="start-hint">Start unlocks once the test sound has finished.</p>
+  </div>
+
+  <!-- ═══ BLOCK INTRO ═══ -->
+  <div id="block-screen" class="screen">
+    <h1 id="block-title"></h1>
+    <div class="box"><p id="block-text"></p></div>
+    <button class="btn-primary" id="block-btn">Begin</button>
+  </div>
+
+  <!-- ═══ RATING TRIAL ═══ -->
+  <div id="trial-screen" class="screen">
+    <div id="trial-progress"></div>
+    <div id="ref-panel"></div>
+    <div class="comp-list" id="comp-list"></div>
+    <div id="trial-gate"></div>
+    <button class="btn-primary" id="next-btn" disabled>Next &rarr;</button>
+    <p id="submit-status"></p>
+    <button class="btn-primary" id="retry-btn" style="display:none">Try again</button>
+  </div>
+
+  <!-- ═══ RESUME (after an interrupted session) ═══ -->
+  <div id="resume-screen" class="screen">
+    <h1>Welcome back</h1>
+    <div class="box"><p id="resume-text"></p></div>
+    <button class="btn-primary" id="resume-btn">Continue</button>
+  </div>
+
+  <!-- ═══ THANK YOU ═══ -->
+  <div id="end-screen" class="screen">
+    <h1>Thank you!</h1>
+    <p class="subtitle" id="end-note">Your responses have been saved.<br>You will be redirected to Prolific in a moment…</p>
+  </div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const STIMULI    = ['RFSM', 'RFRM', 'SFSM', 'SFRM'];
+const CARD_W_MM  = 85.6, CARD_H_MM = 54.0;
+const IMAGE_MM   = 50;                  // same physical size as the 4×4 task
+const NEUTRAL_START = 50;               // every slider starts at the neutral midpoint
+const SUBMIT_URL = '/submit-ratings';
+
+let pxPerMm = 96 / 25.4;
+
+// ── Prolific params ───────────────────────────────────────────────────────────
+const urlParams       = new URLSearchParams(location.search);
+const prolificPid     = urlParams.get('PROLIFIC_PID') || 'unknown';
+const prolificStudy   = urlParams.get('STUDY_ID')     || 'unknown';
+const prolificSession = urlParams.get('SESSION_ID')   || 'unknown';
+
+// ── Build randomized trial list: 8 references, each with shuffled comparisons ─
+function shuffle(a) { a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a; }
+
+// Two blocked sub-experiments: V:A (image reference -> rate sounds) and A:V (sound
+// reference -> rate images). Trials are shuffled WITHIN each block; the order of the
+// two blocks is randomized per participant and logged as `block_order`.
+const V_BLOCK = shuffle(STIMULI.map(s => ({ direction: 'V_ref', reference: s, comparisons: shuffle(STIMULI) })));
+const A_BLOCK = shuffle(STIMULI.map(s => ({ direction: 'A_ref', reference: s, comparisons: shuffle(STIMULI) })));
+const V_FIRST = Math.random() < 0.5;
+let BLOCK_ORDER = V_FIRST ? 'V_first' : 'A_first';
+let TRIALS = V_FIRST ? [...V_BLOCK, ...A_BLOCK] : [...A_BLOCK, ...V_BLOCK];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let trialIndex = 0;
+const allRatings = [];        // long-format rows collected across trials
+const audioCache = {};
+STIMULI.forEach(s => { audioCache[s] = new Audio(s + '.wav'); audioCache[s].preload = 'auto'; });
+const testAudio = new Audio('RFSM.wav');   // reuse a stimulus as volume check
+testAudio.preload = 'auto';
+
+// ── Audio playback policy (matches the 2x2 / 4x4 tasks) ──────────────────────
+//   · only one sound at a time — a click is ignored while another sound plays
+//   · a sound cannot be stopped once it has started
+//   · a sound counts as HEARD only when it finishes (onended), never on click
+let currentAudio = null;
+
+function refreshGate() {
+  if (document.getElementById('trial-screen').classList.contains('active')) updateGate();
+}
+
+function playGated(audio, btn, onComplete) {
+  if (currentAudio && !currentAudio.paused) return;   // something is already playing
+  const label = btn.dataset.label || btn.innerHTML;
+  btn.dataset.label = label;
+  const restore = () => { btn.classList.remove('playing'); btn.innerHTML = label; };
+
+  audio.currentTime = 0;
+  const p = audio.play();
+  if (p && p.catch) p.catch(() => { restore(); currentAudio = null; refreshGate(); });
+
+  currentAudio = audio;
+  btn.classList.add('playing');
+  btn.innerHTML = '&#9654; Playing&hellip;';
+  refreshGate();
+
+  audio.onended = () => {
+    restore();
+    btn.classList.add('played');
+    currentAudio = null;
+    onComplete();
+  };
+}
+
+const showScreen = id => { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                           document.getElementById(id).classList.add('active'); };
+
+// ── Checkpointing ────────────────────────────────────────────────────────────
+// The only copy of a participant's work lives in `allRatings` until the final
+// POST. Persist it after every round so a crash, reload or accidental close is
+// recoverable instead of silently costing the whole session.
+const CKPT_KEY = 'rating_ckpt_v1';
+
+function saveCheckpoint() {
+  try {
+    localStorage.setItem(CKPT_KEY, JSON.stringify({
+      pid: prolificPid, trialIndex, allRatings,
+      blockOrder: BLOCK_ORDER, trials: TRIALS, pxPerMm
+    }));
+  } catch (e) { /* private mode / quota — non-fatal, carry on */ }
+}
+function clearCheckpoint() { try { localStorage.removeItem(CKPT_KEY); } catch (e) {} }
+function loadCheckpoint() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CKPT_KEY) || 'null');
+    if (!c || c.pid !== prolificPid) return null;
+    if (!Array.isArray(c.allRatings) || !c.allRatings.length) return null;
+    if (!Array.isArray(c.trials) || c.trials.length !== 8) return null;
+    if (typeof c.trialIndex !== 'number' || c.trialIndex < 1 || c.trialIndex >= 8) return null;
+    return c;
+  } catch (e) { return null; }
+}
+
+// Warn before leaving mid-task (browsers show their own generic wording).
+window.addEventListener('beforeunload', e => {
+  const inTask = document.getElementById('trial-screen').classList.contains('active');
+  if (inTask && allRatings.length < 32) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ── Consent ──────────────────────────────────────────────────────────────────
+document.getElementById('consent-box').addEventListener('change', e =>
+  document.getElementById('consent-btn').disabled = !e.target.checked);
+document.getElementById('consent-btn').addEventListener('click', () => showScreen('calibration-screen'));
+
+// ── Calibration (identical mechanism to the 4×4 task) ────────────────────────
+const calibCard = document.getElementById('calibration-card');
+const calibSlider = document.getElementById('calib-slider');
+function applySlider(v) { const w = parseInt(v), h = Math.round(w * CARD_H_MM / CARD_W_MM);
+  calibCard.style.width = w + 'px'; calibCard.style.height = h + 'px'; }
+applySlider(calibSlider.value);
+calibSlider.addEventListener('input', () => applySlider(calibSlider.value));
+document.getElementById('calib-confirm-btn').addEventListener('click', () => {
+  pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
+  showScreen('start-screen');
+});
+
+// ── Instructions + sound test ────────────────────────────────────────────────
+document.getElementById('sound-test-btn').addEventListener('click', () => {
+  const btn = document.getElementById('sound-test-btn');
+  playGated(testAudio, btn, () => {
+    document.getElementById('start-btn').disabled = false;
+    document.getElementById('start-hint').textContent = 'Sound confirmed — you can start.';
+  });
+});
+document.getElementById('start-btn').addEventListener('click', () => showBlockIntro());
+
+// ── Block intro (shown before each of the two blocks) ────────────────────────
+function showBlockIntro() {
+  const t = TRIALS[trialIndex];
+  document.getElementById('block-title').textContent = `Part ${trialIndex === 0 ? 1 : 2} of 2`;
+  document.getElementById('block-text').innerHTML = t.direction === 'V_ref'
+    ? 'In this part you will see an <strong>image</strong> and hear <strong>four sounds</strong>.<br>'
+      + 'Rate how similar each sound is to the image.<br><br>'
+      + '<span class="small">Each sound must finish playing before its slider unlocks.</span>'
+    : 'In this part you will hear a <strong>sound</strong> and see <strong>four images</strong>.<br>'
+      + 'Rate how similar each image is to the sound.<br><br>'
+      + '<span class="small">The reference sound must finish playing before you can continue.</span>';
+  showScreen('block-screen');
+}
+
+document.getElementById('block-btn').addEventListener('click', () => {
+  renderTrial(); showScreen('trial-screen');
+});
+
+// ── Trial rendering ──────────────────────────────────────────────────────────
+function imgTag(stim, mm) {
+  const px = Math.round(mm * pxPerMm);
+  return `<img src="${stim}.png" width="${px}" height="${px}" alt="">`;
+}
+
+let trialState = null;
+
+function renderTrial() {
+  const t = TRIALS[trialIndex];
+  trialState = {
+    t0: Date.now(), refPlays: 0,
+    compPlays: Object.fromEntries(t.comparisons.map(c => [c, 0])),
+    ratings:   Object.fromEntries(t.comparisons.map(c => [c, null])),
+    initialSlider: {}
+  };
+  document.getElementById('trial-progress').textContent = `Round ${trialIndex+1} of ${TRIALS.length}`;
+
+  const ref = document.getElementById('ref-panel');
+  if (t.direction === 'V_ref') {
+    ref.innerHTML = `<p class="small">Reference</p>${imgTag(t.reference, IMAGE_MM + 12)}
+      <p class="small" style="margin-top:6px">How similar is each sound to this image?</p>`;
+  } else {
+    ref.innerHTML = `<p class="small">Reference</p>
+      <button class="play-btn big" id="ref-play">&#9654; Play reference sound</button>
+      <p class="small" style="margin-top:6px">How similar is each image to this sound?</p>`;
+    document.getElementById('ref-play').onclick = () => {
+      const btn = document.getElementById('ref-play');
+      playGated(audioCache[t.reference], btn, () => {
+        trialState.refPlays++;
+        updateGate();
+      });
+    };
+  }
+
+  const list = document.getElementById('comp-list');
+  const isImageComparison = t.direction === 'A_ref';     // sound reference -> four images
+  list.innerHTML = '';
+  list.className = 'comp-list' + (isImageComparison ? ' grid' : '');
+  t.comparisons.forEach(c => {
+    const init = NEUTRAL_START;                           // neutral start — no per-item anchor
+    trialState.initialSlider[c] = init;
+    const sliderHTML = `
+      <div class="slider-cell ${isImageComparison ? '' : 'locked'}" id="cell-${c}">
+        <input type="range" min="1" max="100" value="${init}" class="untouched" data-comp="${c}"${isImageComparison ? '' : ' disabled'}>
+        <div class="anchors"><span>least similar</span>
+          <span class="rating-val unset" id="val-${c}">—</span>
+          <span>most similar</span></div>
+      </div>`;
+    const el = document.createElement('div');
+    if (isImageComparison) {
+      el.className = 'comp-cell';
+      el.innerHTML = imgTag(c, IMAGE_MM) + sliderHTML;
+    } else {
+      el.className = 'comp-row';
+      el.innerHTML = `<div class="stim-cell"><button class="play-btn" data-comp="${c}">&#9654; Play</button></div>` + sliderHTML;
+    }
+    list.appendChild(el);
+  });
+
+  list.querySelectorAll('.play-btn').forEach(b => b.onclick = () => {
+    const c = b.dataset.comp;
+    playGated(audioCache[c], b, () => {
+      trialState.compPlays[c]++;
+      const cell = document.getElementById('cell-' + c);
+      cell.classList.remove('locked');
+      cell.querySelector('input[type=range]').disabled = false;
+      updateGate();
+    });
+  });
+  list.querySelectorAll('input[type=range]').forEach(sl => {
+    const mark = () => {
+      if (sl.disabled) return;
+      const c = sl.dataset.comp;
+      trialState.ratings[c] = parseInt(sl.value);
+      sl.classList.remove('untouched');
+      const v = document.getElementById('val-' + c);
+      v.textContent = sl.value; v.classList.remove('unset');
+      updateGate();
+    };
+    sl.oninput = mark;
+    // a click that lands exactly on the neutral thumb fires no 'input' — accept it as 50
+    sl.addEventListener('pointerdown', () => setTimeout(mark, 0));
+  });
+
+  document.getElementById('next-btn').disabled = true;
+  updateGate();
+}
+
+function updateGate() {
+  const t = TRIALS[trialIndex];
+  const needRef  = (t.direction === 'A_ref') && trialState.refPlays === 0;
+  const needPlay = (t.direction === 'V_ref') ? t.comparisons.filter(c => trialState.compPlays[c] === 0) : [];
+  const needRate = t.comparisons.filter(c => trialState.ratings[c] === null);
+  const gate = document.getElementById('trial-gate');
+
+  if (currentAudio && !currentAudio.paused) {          // one sound at a time
+    gate.className = 'listening';
+    gate.textContent = 'Listening… please wait for the sound to finish.';
+    document.getElementById('next-btn').disabled = true;
+    return;
+  }
+
+  const parts = [];
+  if (needRef)          parts.push('listen to the reference sound in full');
+  if (needPlay.length)  parts.push(`listen to ${needPlay.length} more sound${needPlay.length>1?'s':''} in full`);
+  if (needRate.length)  parts.push(`move ${needRate.length} more slider${needRate.length>1?'s':''}`);
+  gate.className = parts.length ? '' : 'ready';
+  gate.textContent = parts.length ? 'To continue: ' + parts.join(' · ') : 'All set — press Next when you are satisfied with your ratings.';
+  document.getElementById('next-btn').disabled = parts.length > 0;
+}
+
+document.getElementById('next-btn').addEventListener('click', () => {
+  const t = TRIALS[trialIndex];
+  t.comparisons.forEach((c, pos) => allRatings.push({
+    prolific_pid: prolificPid, study_id: prolificStudy, session_id: prolificSession,
+    trial_index: trialIndex + 1, direction: t.direction,
+    block_order: BLOCK_ORDER, block_position: trialIndex < 4 ? 1 : 2,
+    reference: t.reference, comparison: c, position: pos + 1,
+    rating: trialState.ratings[c], slider_start: trialState.initialSlider[c],
+    ref_plays: t.direction === 'A_ref' ? trialState.refPlays : null,
+    comp_plays: t.direction === 'V_ref' ? trialState.compPlays[c] : null,
+    trial_rt_ms: Date.now() - trialState.t0,
+    px_per_mm: Math.round(pxPerMm * 100) / 100
+  }));
+  trialIndex++;
+  saveCheckpoint();
+  if (trialIndex === TRIALS.length) submitAll();
+  else if (trialIndex === 4) showBlockIntro();      // second block starts here
+  else renderTrial();
+});
+
+// ── Submit ───────────────────────────────────────────────────────────────────
+// The thank-you screen is shown ONLY after the server confirms the rows are stored.
+// Failures retry with backoff and then hand the participant a Try again button —
+// never a false "saved" message with the data gone.
+const RETRY_DELAYS_MS = [0, 2000, 5000, 10000];
+
+async function submitAll() {
+  const next   = document.getElementById('next-btn');
+  const retry  = document.getElementById('retry-btn');
+  const status = document.getElementById('submit-status');
+  next.style.display = 'none';
+  retry.style.display = 'none';
+  status.className = 'info';
+  status.textContent = 'Saving your responses…';
+
+  const payload = { prolific_pid: prolificPid, study_id: prolificStudy,
+                    session_id: prolificSession, ratings: allRatings };
+
+  for (let i = 0; i < RETRY_DELAYS_MS.length; i++) {
+    if (RETRY_DELAYS_MS[i]) {
+      status.textContent = `Saving failed — retrying in ${RETRY_DELAYS_MS[i] / 1000}s…`;
+      await new Promise(r => setTimeout(r, RETRY_DELAYS_MS[i]));
+      status.textContent = 'Saving your responses…';
+    }
+    try {
+      const res = await fetch(SUBMIT_URL, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload), keepalive: true
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'server rejected the submission');
+      clearCheckpoint();
+      finish(data);
+      return;
+    } catch (err) {
+      console.error(`submit attempt ${i + 1} failed:`, err);
+    }
+  }
+
+  status.className = 'error';
+  status.innerHTML = 'We could not save your responses. Please check your internet connection '
+                   + 'and press <strong>Try again</strong>. Do not close this window — your answers are still here.';
+  retry.style.display = '';
+  retry.disabled = false;
+}
+
+function finish(data) {
+  showScreen('end-screen');
+  const note = document.getElementById('end-note');
+  if (data.completion_url) {
+    note.innerHTML = 'Your responses have been saved.<br>You will be redirected to Prolific in a moment…';
+    setTimeout(() => location.href = data.completion_url, 2500);
+  } else if (data.completion_code) {
+    note.innerHTML = 'Your responses have been saved.<br>Please return to Prolific and enter completion code '
+                   + `<strong>${data.completion_code}</strong>.`;
+  } else {
+    note.innerHTML = 'Your responses have been saved.<br>Please return to Prolific to complete your submission. '
+                   + 'If you are not credited automatically, contact the researcher.';
+  }
+}
+
+document.getElementById('retry-btn').addEventListener('click', () => {
+  document.getElementById('retry-btn').disabled = true;
+  submitAll();
+});
+
+// ── Resume an interrupted session ────────────────────────────────────────────
+(function offerResume() {
+  const c = loadCheckpoint();
+  if (!c) return;
+  TRIALS = c.trials; trialIndex = c.trialIndex; BLOCK_ORDER = c.blockOrder;
+  pxPerMm = c.pxPerMm || pxPerMm;
+  allRatings.push(...c.allRatings);
+  document.getElementById('resume-text').innerHTML =
+    `You already completed <strong>${trialIndex} of 8</strong> rounds. `
+    + 'Your answers were kept — you can carry on where you stopped.';
+  document.getElementById('resume-btn').addEventListener('click', () => {
+    if (trialIndex === 4) showBlockIntro();
+    else { renderTrial(); showScreen('trial-screen'); }
+  });
+  showScreen('resume-screen');
+})();
+</script>
+</body>
+</html>
