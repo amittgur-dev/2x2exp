@@ -12,6 +12,8 @@
       display: flex; align-items: center; justify-content: center; padding: 20px;
     }
     .screen { display: none; width: 100%; max-width: 860px; text-align: center; }
+    /* stimulus screens need room for four calibrated images side by side */
+    #trial-screen, #familiarize-screen { max-width: 1500px; }
     .screen.active { display: block; }
     h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 14px; }
     .subtitle { color: #6b7280; margin-bottom: 22px; }
@@ -51,15 +53,16 @@
     .comp-row img { display: block; }
     .slider-cell { flex: 1; text-align: left; }
 
-    /* image comparisons: 2x2 grid so all four stay visible and nothing overflows */
-    .comp-list.grid { display: grid; grid-template-columns: repeat(2, auto);
-                      justify-content: center; align-items: start;
-                      gap: 14px; max-width: 100%; width: max-content; }
+    /* image comparisons: all four on ONE row when there is room, wrapping to 2x2
+       only on screens too narrow to fit four calibrated stimuli side by side */
+    .comp-list.grid { display: flex; flex-direction: row; flex-wrap: wrap;
+                      justify-content: center; align-items: flex-start;
+                      gap: 12px; max-width: 100%; }
     .comp-cell { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
-                 padding: 14px 16px; display: flex; flex-direction: column;
-                 align-items: center; gap: 10px; }
+                 padding: 12px 14px; display: flex; flex-direction: column;
+                 align-items: center; gap: 8px; flex: 0 0 auto; }
     .comp-cell img { display: block; }
-    .comp-cell .slider-cell { flex: none; width: 100%; min-width: 260px; }
+    .comp-cell .slider-cell { flex: none; width: 100%; min-width: 200px; }
     .slider-cell input[type=range] { width: 100%; accent-color: #2563eb; }
     /* neutral start: stays grey until the participant actually sets a value */
     .slider-cell input[type=range].untouched { accent-color: #c3c9d4; }
@@ -74,7 +77,7 @@
     #start-hint { font-size: 1.05rem; font-weight: 700; color: #6b7280; margin-top: 10px; }
     #block-screen .box { text-align: center; max-width: 560px; }
     #block-screen .box p { margin-bottom: 0; font-size: 1.05rem; }
-    #familiarize { margin: 0 auto 22px; max-width: 820px; }
+    #familiarize { margin: 0 auto 22px; max-width: 100%; }
     #fam-sounds, #fam-images { display: flex; justify-content: center;
                                flex-wrap: wrap; gap: 12px; }
     #fam-images img { display: block; }
@@ -384,7 +387,7 @@ function renderTrial() {
 
   const ref = document.getElementById('ref-panel');
   if (t.direction === 'V_ref') {
-    ref.innerHTML = `<p class="small">Reference</p>${imgTag(t.reference, IMAGE_MM + 12)}
+    ref.innerHTML = `<p class="small">Reference</p>${imgTag(t.reference, IMAGE_MM)}
       <p class="small" style="margin-top:6px">How similar is each sound to this image?</p>`;
   } else {
     ref.innerHTML = `<p class="small">Reference</p>
