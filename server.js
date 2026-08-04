@@ -146,7 +146,12 @@ app.post('/submit-ratings', async (req, res) => {
 
   if (error) {
     console.error('Supabase error (ratings):', error);
-    return res.status(500).json({ success: false, error: 'Failed to save data' });
+    // Surface the database detail: the participant still sees a generic message
+    // (the frontend only logs this), but it makes a broken deploy diagnosable.
+    return res.status(500).json({
+      success: false, error: 'Failed to save data',
+      detail: error.message, code: error.code, hint: error.hint
+    });
   }
 
   res.json({
