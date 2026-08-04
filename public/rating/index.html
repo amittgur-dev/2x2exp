@@ -88,23 +88,41 @@
 </head>
 <body>
 
+  <!-- ═══ INSTRUCTIONS ═══ -->
+  <div id="start-screen" class="screen active">
+    <h1>Similarity Rating Task</h1>
+    <div class="box">
+      <p>Each round shows a <strong>reference</strong> — an image or a sound — with four items of the other kind.</p>
+      <p><strong>Rate how similar each item is to the reference</strong> by moving its slider.</p>
+      <p>There are no right or wrong answers; we want your impression. Each sound must finish playing before its slider unlocks — replay as often as you like.</p>
+      <p>Two parts, 4 rounds each. For starters, play the four sounds and look at the four images
+         used in the experiment. Set a comfortable volume before you begin.</p>
+    </div>
+    <div id="familiarize">
+      <p class="small">The four sounds — play each one:</p>
+      <div id="fam-sounds"></div>
+      <p class="small" style="margin-top:18px">The four images:</p>
+      <div id="fam-images"></div>
+    </div>
+    <button class="btn-primary" id="start-btn" disabled>Continue</button>
+    <p class="small" id="start-hint">Play all four sounds to continue.</p>
+  </div>
+
   <!-- ═══ CONSENT ═══ -->
-  <div id="consent-screen" class="screen active">
+  <div id="consent-screen" class="screen">
     <h1>Participant Information &amp; Consent</h1>
     <div class="box">
       <p>You are invited to take part in a scientific study on the perception of sounds and images, conducted by [RESEARCHER NAMES], [INSTITUTIONS]. Please read the following before deciding to participate.</p>
       <ul>
-        <li><strong>Procedure.</strong> You will view images and listen to short sounds, and rate how similar they seem to you. The session takes about [X] minutes.</li>
-        <li><strong>Voluntary participation.</strong> Taking part is entirely voluntary. You may withdraw at any moment, without giving a reason and without any penalty, by closing this window.</li>
+        <li><strong>Voluntary participation.</strong> Taking part is entirely voluntary. You may withdraw at any moment by closing this window.</li>
         <li><strong>Use of data.</strong> The data obtained in this session will be used for a scientific study and may be published in anonymized, aggregated form in scientific journals and presentations.</li>
         <li><strong>Anonymity.</strong> No identifying information is collected. Your responses are stored under your Prolific identifier only, which is removed from the dataset before analysis and publication.</li>
-        <li><strong>Data storage.</strong> Data are stored securely on servers within the EU and retained in accordance with the data-management policy of [INSTITUTION].</li>
         <li><strong>Risks.</strong> There are no known risks beyond those of ordinary computer use. Please set your volume to a comfortable level.</li>
-        <li><strong>Contact.</strong> Questions may be addressed to [CONTACT EMAIL]. This study has been approved by [ETHICS COMMITTEE, PROTOCOL NO.].</li>
+        <li><strong>Contact.</strong> Questions may be addressed to Amit.Gur@ahk.nl.</li>
       </ul>
       <div class="consent-check">
         <input type="checkbox" id="consent-box">
-        <label for="consent-box">I confirm that I am at least 18 years old, that I have read and understood the information above, and that I consent to participate in this study.</label>
+        <label for="consent-box">I confirm that I have read and understood the information above, and that I consent to participate in this study.</label>
       </div>
     </div>
     <button class="btn-primary" id="consent-btn" disabled>I consent — continue</button>
@@ -119,26 +137,6 @@
     <input type="range" id="calib-slider" min="150" max="700" value="323">
     <span id="calib-hint">Drag the slider until the rectangle matches your card</span><br>
     <button class="btn-primary" id="calib-confirm-btn">Confirm &amp; Continue</button>
-  </div>
-
-  <!-- ═══ INSTRUCTIONS ═══ -->
-  <div id="start-screen" class="screen">
-    <h1>Similarity Rating Task</h1>
-    <div class="box">
-      <p>Each round shows a <strong>reference</strong> — an image or a sound — with four items of the other kind.</p>
-      <p><strong>Rate how similar each item is to the reference</strong> by moving its slider.</p>
-      <p>There are no right or wrong answers; we want your impression. Each sound must finish playing before its slider unlocks — replay as often as you like.</p>
-      <p>Two parts, 4 rounds each. Below are all the sounds and images you will meet. Listen to each
-         sound in full and set a comfortable volume before you begin.</p>
-    </div>
-    <div id="familiarize">
-      <p class="small">The four sounds — play each one:</p>
-      <div id="fam-sounds"></div>
-      <p class="small" style="margin-top:18px">The four images:</p>
-      <div id="fam-images"></div>
-    </div>
-    <button class="btn-primary" id="start-btn" disabled>Start</button>
-    <p class="small" id="start-hint">Play all four sounds to continue.</p>
   </div>
 
   <!-- ═══ BLOCK INTRO ═══ -->
@@ -283,6 +281,8 @@ window.addEventListener('beforeunload', e => {
 document.getElementById('consent-box').addEventListener('change', e =>
   document.getElementById('consent-btn').disabled = !e.target.checked);
 document.getElementById('consent-btn').addEventListener('click', () => showScreen('calibration-screen'));
+// Flow: instructions + familiarization -> consent -> calibration -> task
+document.getElementById('start-btn').addEventListener('click', () => showScreen('consent-screen'));
 
 // ── Calibration (identical mechanism to the 4×4 task) ────────────────────────
 const calibCard = document.getElementById('calibration-card');
@@ -293,8 +293,7 @@ applySlider(calibSlider.value);
 calibSlider.addEventListener('input', () => applySlider(calibSlider.value));
 document.getElementById('calib-confirm-btn').addEventListener('click', () => {
   pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
-  renderFamiliarization();          // needs pxPerMm, so build it after calibration
-  showScreen('start-screen');
+  showBlockIntro();                 // calibration is the last step before the task
 });
 
 // ── Instructions + sound test ────────────────────────────────────────────────
@@ -336,7 +335,7 @@ function updateFamGate() {
     ? 'All four sounds heard — you can start.'
     : `Play all four sounds to continue (${famPlayed.size} of ${STIMULI.length} heard).`;
 }
-document.getElementById('start-btn').addEventListener('click', () => showBlockIntro());
+renderFamiliarization();            // instructions are the first screen, so build it now
 
 // ── Block intro (shown before each of the two blocks) ────────────────────────
 function showBlockIntro() {
