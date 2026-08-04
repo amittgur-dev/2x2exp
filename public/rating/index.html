@@ -88,28 +88,8 @@
 </head>
 <body>
 
-  <!-- ═══ INSTRUCTIONS ═══ -->
-  <div id="start-screen" class="screen active">
-    <h1>Similarity Rating Task</h1>
-    <div class="box">
-      <p>Each round shows a <strong>reference</strong> — an image or a sound — with four items of the other kind.</p>
-      <p><strong>Rate how similar each item is to the reference</strong> by moving its slider.</p>
-      <p>There are no right or wrong answers; we want your impression. Each sound must finish playing before its slider unlocks — replay as often as you like.</p>
-      <p>Two parts, 4 rounds each. For starters, play the four sounds and look at the four images
-         used in the experiment. Set a comfortable volume before you begin.</p>
-    </div>
-    <div id="familiarize">
-      <p class="small">The four sounds — play each one:</p>
-      <div id="fam-sounds"></div>
-      <p class="small" style="margin-top:18px">The four images:</p>
-      <div id="fam-images"></div>
-    </div>
-    <button class="btn-primary" id="start-btn" disabled>Continue</button>
-    <p class="small" id="start-hint">Play all four sounds to continue.</p>
-  </div>
-
   <!-- ═══ CONSENT ═══ -->
-  <div id="consent-screen" class="screen">
+  <div id="consent-screen" class="screen active">
     <h1>Participant Information &amp; Consent</h1>
     <div class="box">
       <p>You are invited to take part in a scientific study on the perception of sounds and images, conducted by [RESEARCHER NAMES], [INSTITUTIONS]. Please read the following before deciding to participate.</p>
@@ -128,6 +108,19 @@
     <button class="btn-primary" id="consent-btn" disabled>I consent — continue</button>
   </div>
 
+  <!-- ═══ INSTRUCTIONS ═══ -->
+  <div id="start-screen" class="screen">
+    <h1>Similarity Rating Task</h1>
+    <div class="box">
+      <p>Each round shows a <strong>reference</strong> — an image or a sound — with four items of the other kind.</p>
+      <p><strong>Rate how similar each item is to the reference</strong> by moving its slider.</p>
+      <p>There are no right or wrong answers; we want your impression. Each sound must finish playing before its slider unlocks — replay as often as you like.</p>
+      <p>Two parts, 4 rounds each. Next you will set your screen size, then hear and see all the
+         stimuli used in the experiment.</p>
+    </div>
+    <button class="btn-primary" id="instructions-btn">Continue</button>
+  </div>
+
   <!-- ═══ CALIBRATION ═══ -->
   <div id="calibration-screen" class="screen">
     <h1>Screen Calibration</h1>
@@ -137,6 +130,21 @@
     <input type="range" id="calib-slider" min="150" max="700" value="323">
     <span id="calib-hint">Drag the slider until the rectangle matches your card</span><br>
     <button class="btn-primary" id="calib-confirm-btn">Confirm &amp; Continue</button>
+  </div>
+
+  <!-- ═══ FAMILIARIZATION ═══ -->
+  <div id="familiarize-screen" class="screen">
+    <h1>The stimuli</h1>
+    <p class="subtitle">For starters, play the four sounds and look at the four images used in the
+      experiment. Set a comfortable volume before you begin.</p>
+    <div id="familiarize">
+      <p class="small">The four sounds — play each one:</p>
+      <div id="fam-sounds"></div>
+      <p class="small" style="margin-top:18px">The four images:</p>
+      <div id="fam-images"></div>
+    </div>
+    <button class="btn-primary" id="start-btn" disabled>Start</button>
+    <p class="small" id="start-hint">Play all four sounds to continue.</p>
   </div>
 
   <!-- ═══ BLOCK INTRO ═══ -->
@@ -216,7 +224,7 @@ let currentAudio = null;
 
 function refreshGate() {
   if (document.getElementById('trial-screen').classList.contains('active')) updateGate();
-  else if (document.getElementById('start-screen').classList.contains('active')) updateFamGate();
+  else if (document.getElementById('familiarize-screen').classList.contains('active')) updateFamGate();
 }
 
 function playGated(audio, btn, onComplete) {
@@ -280,9 +288,10 @@ window.addEventListener('beforeunload', e => {
 // ── Consent ──────────────────────────────────────────────────────────────────
 document.getElementById('consent-box').addEventListener('change', e =>
   document.getElementById('consent-btn').disabled = !e.target.checked);
-document.getElementById('consent-btn').addEventListener('click', () => showScreen('calibration-screen'));
-// Flow: instructions + familiarization -> consent -> calibration -> task
-document.getElementById('start-btn').addEventListener('click', () => showScreen('consent-screen'));
+// Flow: consent -> instructions -> calibration -> familiarization -> task
+document.getElementById('consent-btn').addEventListener('click', () => showScreen('start-screen'));
+document.getElementById('instructions-btn').addEventListener('click', () => showScreen('calibration-screen'));
+document.getElementById('start-btn').addEventListener('click', () => showBlockIntro());
 
 // ── Calibration (identical mechanism to the 4×4 task) ────────────────────────
 const calibCard = document.getElementById('calibration-card');
@@ -293,7 +302,8 @@ applySlider(calibSlider.value);
 calibSlider.addEventListener('input', () => applySlider(calibSlider.value));
 document.getElementById('calib-confirm-btn').addEventListener('click', () => {
   pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
-  showBlockIntro();                 // calibration is the last step before the task
+  renderFamiliarization();          // built after calibration, so previews are true size
+  showScreen('familiarize-screen');
 });
 
 // ── Instructions + sound test ────────────────────────────────────────────────
@@ -335,7 +345,6 @@ function updateFamGate() {
     ? 'All four sounds heard — you can start.'
     : `Play all four sounds to continue (${famPlayed.size} of ${STIMULI.length} heard).`;
 }
-renderFamiliarization();            // instructions are the first screen, so build it now
 
 // ── Block intro (shown before each of the two blocks) ────────────────────────
 function showBlockIntro() {
