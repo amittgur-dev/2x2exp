@@ -8,7 +8,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f7f7f5; color: #1f2937; min-height: 100vh;
+      background: #ffffff; color: #1f2937; min-height: 100vh;
       display: flex; align-items: center; justify-content: center; padding: 20px;
     }
     .screen { display: none; width: 100%; max-width: 860px; text-align: center; }
@@ -74,6 +74,10 @@
     #start-hint { font-size: 1.05rem; font-weight: 700; color: #6b7280; margin-top: 10px; }
     #block-screen .box { text-align: center; max-width: 560px; }
     #block-screen .box p { margin-bottom: 0; font-size: 1.05rem; }
+    #familiarize { margin: 0 auto 22px; max-width: 820px; }
+    #fam-sounds, #fam-images { display: flex; justify-content: center;
+                               flex-wrap: wrap; gap: 12px; }
+    #fam-images img { display: block; }
     #resume-screen .box { text-align: center; max-width: 560px; }
     #resume-screen .box p { margin-bottom: 0; font-size: 1.05rem; }
     #submit-status { font-size: 1.05rem; font-weight: 700; margin-top: 14px; min-height: 1.4em; }
@@ -124,11 +128,17 @@
       <p>Each round shows a <strong>reference</strong> — an image or a sound — with four items of the other kind.</p>
       <p><strong>Rate how similar each item is to the reference</strong> by moving its slider.</p>
       <p>There are no right or wrong answers; we want your impression. Each sound must finish playing before its slider unlocks — replay as often as you like.</p>
-      <p>Two parts, 4 rounds each. First, check your volume:</p>
-      <p style="text-align:center"><button class="play-btn" id="sound-test-btn">&#9654; Play test sound</button></p>
+      <p>Two parts, 4 rounds each. Below are all the sounds and images you will meet. Listen to each
+         sound in full and set a comfortable volume before you begin.</p>
+    </div>
+    <div id="familiarize">
+      <p class="small">The four sounds — play each one:</p>
+      <div id="fam-sounds"></div>
+      <p class="small" style="margin-top:18px">The four images:</p>
+      <div id="fam-images"></div>
     </div>
     <button class="btn-primary" id="start-btn" disabled>Start</button>
-    <p class="small" id="start-hint">Start unlocks once the test sound has finished.</p>
+    <p class="small" id="start-hint">Play all four sounds to continue.</p>
   </div>
 
   <!-- ═══ BLOCK INTRO ═══ -->
@@ -197,8 +207,8 @@ let trialIndex = 0;
 const allRatings = [];        // long-format rows collected across trials
 const audioCache = {};
 STIMULI.forEach(s => { audioCache[s] = new Audio(s + '.wav'); audioCache[s].preload = 'auto'; });
-const testAudio = new Audio('RFSM.wav');   // reuse a stimulus as volume check
-testAudio.preload = 'auto';
+// No separate test sound: the volume check is the four-sound familiarization below,
+// so no single stimulus gets extra exposure.
 
 // ── Audio playback policy (matches the 2x2 / 4x4 tasks) ──────────────────────
 //   · only one sound at a time — a click is ignored while another sound plays
@@ -208,6 +218,7 @@ let currentAudio = null;
 
 function refreshGate() {
   if (document.getElementById('trial-screen').classList.contains('active')) updateGate();
+  else if (document.getElementById('start-screen').classList.contains('active')) updateFamGate();
 }
 
 function playGated(audio, btn, onComplete) {
@@ -257,7 +268,7 @@ function loadCheckpoint() {
     if (!c || c.pid !== prolificPid) return null;
     if (!Array.isArray(c.allRatings) || !c.allRatings.length) return null;
     if (!Array.isArray(c.trials) || c.trials.length !== 8) return null;
-    if (typeof c.trialIndex !== 'number' || c.trialIndex < 1 || c.trialIndex >= 8) return null;
+    if (typeof c.trialIndex !== 'number' || c.trialIndex < 1 || c.trialIndex > 8) return null;
     return c;
   } catch (e) { return null; }
 }
@@ -282,17 +293,49 @@ applySlider(calibSlider.value);
 calibSlider.addEventListener('input', () => applySlider(calibSlider.value));
 document.getElementById('calib-confirm-btn').addEventListener('click', () => {
   pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
+  renderFamiliarization();          // needs pxPerMm, so build it after calibration
   showScreen('start-screen');
 });
 
 // ── Instructions + sound test ────────────────────────────────────────────────
-document.getElementById('sound-test-btn').addEventListener('click', () => {
-  const btn = document.getElementById('sound-test-btn');
-  playGated(testAudio, btn, () => {
-    document.getElementById('start-btn').disabled = false;
-    document.getElementById('start-hint').textContent = 'Sound confirmed — you can start.';
+// Familiarization: every participant hears all four sounds in full and sees all four
+// images before the first judgment. This sets the range of the stimulus space so early
+// and late rounds are rated on the same scale, and it equalises exposure across the
+// four sounds (a single test sound would over-expose whichever one was chosen).
+const famPlayed = new Set();
+
+function renderFamiliarization() {
+  const sounds = document.getElementById('fam-sounds');
+  sounds.innerHTML = '';
+  shuffle(STIMULI).forEach(s => {                 // preview order randomized too
+    const b = document.createElement('button');
+    b.className = 'play-btn';
+    b.innerHTML = '&#9654; Play';
+    b.addEventListener('click', () => playGated(audioCache[s], b, () => {
+      famPlayed.add(s);
+      updateFamGate();
+    }));
+    sounds.appendChild(b);
   });
-});
+  document.getElementById('fam-images').innerHTML =
+    shuffle(STIMULI).map(s => imgTag(s, IMAGE_MM)).join('');
+  updateFamGate();
+}
+
+function updateFamGate() {
+  const hint = document.getElementById('start-hint');
+  const start = document.getElementById('start-btn');
+  if (currentAudio && !currentAudio.paused) {
+    hint.textContent = 'Listening… please wait for the sound to finish.';
+    start.disabled = true;
+    return;
+  }
+  const done = famPlayed.size >= STIMULI.length;
+  start.disabled = !done;
+  hint.textContent = done
+    ? 'All four sounds heard — you can start.'
+    : `Play all four sounds to continue (${famPlayed.size} of ${STIMULI.length} heard).`;
+}
 document.getElementById('start-btn').addEventListener('click', () => showBlockIntro());
 
 // ── Block intro (shown before each of the two blocks) ────────────────────────
@@ -519,11 +562,17 @@ document.getElementById('retry-btn').addEventListener('click', () => {
   TRIALS = c.trials; trialIndex = c.trialIndex; BLOCK_ORDER = c.blockOrder;
   pxPerMm = c.pxPerMm || pxPerMm;
   allRatings.push(...c.allRatings);
-  document.getElementById('resume-text').innerHTML =
-    `You already completed <strong>${trialIndex} of 8</strong> rounds. `
-    + 'Your answers were kept — you can carry on where you stopped.';
+  // Finished all 8 rounds but the save never succeeded — the most valuable case to
+  // recover: go straight back to submitting rather than asking for any more work.
+  const complete = trialIndex === 8 && allRatings.length === 32;
+  document.getElementById('resume-text').innerHTML = complete
+    ? 'You finished all 8 rounds, but your answers could not be sent last time. '
+      + 'They were kept safely — press Continue to send them now.'
+    : `You already completed <strong>${trialIndex} of 8</strong> rounds. `
+      + 'Your answers were kept — you can carry on where you stopped.';
   document.getElementById('resume-btn').addEventListener('click', () => {
-    if (trialIndex === 4) showBlockIntro();
+    if (complete) { showScreen('trial-screen'); submitAll(); }
+    else if (trialIndex === 4) showBlockIntro();
     else { renderTrial(); showScreen('trial-screen'); }
   });
   showScreen('resume-screen');
