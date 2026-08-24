@@ -64,6 +64,19 @@
     .instructions-box p { margin-bottom: 10px; }
     .instructions-box p:last-child { margin-bottom: 0; }
 
+    /* ── Consent ─────────────────────────────────────────────── */
+    #consent-screen {
+      align-items: center; justify-content: center;
+      gap: 24px; padding: 40px 24px; text-align: center; overflow-y: auto;
+    }
+    #consent-screen h1 { font-size: 1.8rem; font-weight: 700; }
+    #consent-screen .instructions-box { max-width: 720px; }
+    #consent-screen ul { padding-left: 22px; margin-bottom: 10px; }
+    #consent-screen li { margin-bottom: 10px; }
+    .consent-check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; }
+    .consent-check input { margin-top: 4px; transform: scale(1.2); }
+    .btn-primary:disabled { background: #b9c4d2; cursor: default; }
+
     /* ── Task screen ─────────────────────────────────────────── */
     #task-screen { background: #e8ecf0; }
 
@@ -270,8 +283,41 @@
 </head>
 <body>
 
+  <!-- CONSENT -->
+  <div id="consent-screen" class="screen active">
+    <h1>Participant Information &amp; Consent</h1>
+    <div class="instructions-box">
+      <p>You are invited to take part in a scientific study on the perception of sounds and images, conducted by [RESEARCHER NAMES], [INSTITUTIONS]. Please read the following before deciding to participate.</p>
+      <ul>
+        <li><strong>Voluntary participation.</strong> Taking part is entirely voluntary. You may withdraw at any moment by closing this window.</li>
+        <li><strong>Use of data.</strong> The data obtained in this session will be used for a scientific study and may be published in anonymized, aggregated form in scientific journals and presentations.</li>
+        <li><strong>Anonymity.</strong> No identifying information is collected. Your responses are stored under your Prolific identifier only, which is removed from the dataset before analysis and publication.</li>
+        <li><strong>Risks.</strong> There are no known risks beyond those of ordinary computer use. Please set your volume to a comfortable level.</li>
+        <li><strong>Contact.</strong> Questions may be addressed to Amit.Gur@ahk.nl.</li>
+      </ul>
+      <div class="consent-check">
+        <input type="checkbox" id="consent-box">
+        <label for="consent-box">I confirm that I have read and understood the information above, and that I consent to participate in this study.</label>
+      </div>
+    </div>
+    <button class="btn-primary" id="consent-btn" disabled>I consent &mdash; continue</button>
+  </div>
+
+  <!-- INSTRUCTIONS -->
+  <div id="start-screen" class="screen">
+    <h1>Matching Task</h1>
+    <div class="instructions-box">
+      <p>In this task you will see <strong>four images</strong> and hear <strong>four sounds</strong>.</p>
+      <p><strong>Your task is to match each image with the sound that fits it best.</strong></p>
+      <p>Drag each image and its best-fitting sound to the <strong>same group zone</strong>. There are four zones — one image and one sound in each.</p>
+      <p>You can listen to each sound as many times as you like before deciding.</p>
+      <p>Next you will set your screen size, and then the task begins.</p>
+    </div>
+    <button class="btn-primary" id="start-btn">Continue</button>
+  </div>
+
   <!-- CALIBRATION -->
-  <div id="calibration-screen" class="screen active">
+  <div id="calibration-screen" class="screen">
     <h1>Screen Calibration</h1>
     <p class="subtitle">
       To make sure everyone sees the images at the same size, please grab a credit card (or any bank card) and place it next to your screen.<br><br>
@@ -283,18 +329,6 @@
       <span id="calib-hint">Drag the slider until the rectangle matches your card</span>
     </div>
     <button class="btn-primary" id="calib-confirm-btn">Confirm &amp; Continue</button>
-  </div>
-
-  <!-- START -->
-  <div id="start-screen" class="screen">
-    <h1>Matching Task</h1>
-    <div class="instructions-box">
-      <p>In this task you will see <strong>four images</strong> and hear <strong>four sounds</strong>.</p>
-      <p><strong>Your task is to match each image with the sound that fits it best.</strong></p>
-      <p>Drag each image and its best-fitting sound to the <strong>same group zone</strong>. There are four zones — one image and one sound in each.</p>
-      <p>You can listen to each sound as many times as you like before deciding.</p>
-    </div>
-    <button class="btn-primary" id="start-btn">Start</button>
   </div>
 
   <!-- TASK -->
@@ -456,10 +490,18 @@
     applySlider(calibSlider.value);
     calibSlider.addEventListener('input', () => applySlider(calibSlider.value));
 
+    // ── Consent (first screen) ────────────────────────────────────────────────
+    document.getElementById('consent-box').addEventListener('change', e => {
+      document.getElementById('consent-btn').disabled = !e.target.checked;
+    });
+    // Flow: consent -> instructions -> calibration -> task (same as the rating study)
+    document.getElementById('consent-btn').addEventListener('click', () => showScreen('start-screen'));
+
     document.getElementById('calib-confirm-btn').addEventListener('click', () => {
       pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
       applyImageSize();
-      showScreen('start-screen');
+      startTime = Date.now();          // calibration is now the last step before the task
+      showScreen('task-screen');
     });
 
     function applyImageSize() {
@@ -487,10 +529,7 @@
       document.getElementById(id).classList.add('active');
     }
 
-    document.getElementById('start-btn').addEventListener('click', () => {
-      startTime = Date.now();
-      showScreen('task-screen');
-    });
+    document.getElementById('start-btn').addEventListener('click', () => showScreen('calibration-screen'));
 
     // ── Drag events on items ───────────────────────────────────────────────────
     document.querySelectorAll('.item').forEach(el => {
