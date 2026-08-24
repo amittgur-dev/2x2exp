@@ -64,6 +64,14 @@
     .instructions-box p { margin-bottom: 10px; }
     .instructions-box p:last-child { margin-bottom: 0; }
 
+    /* ── Window-size gate ────────────────────────────────────── */
+    #size-gate { display: none; position: fixed; inset: 0; background: #fff; z-index: 999;
+                 align-items: center; justify-content: center; text-align: center; padding: 24px; }
+    #size-gate.show { display: flex; }
+    #size-gate h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 12px; }
+    #size-gate p { margin-bottom: 10px; line-height: 1.55; color: #444; }
+    #size-gate .small-note { font-size: .88rem; color: #6b7280; }
+
     /* ── Consent ─────────────────────────────────────────────── */
     #consent-screen {
       align-items: center; justify-content: center;
@@ -95,11 +103,15 @@
       font-size: 1rem; font-weight: 700; color: #374151;
       text-align: center;
     }
-    #stimulus-items {
-      display: flex; gap: 14px; flex-wrap: wrap;
+    /* Two complete rows: images above, sounds below. nowrap means four items
+       always stay on one line — they can never break into an uneven 3+1. */
+    #stimulus-images, #stimulus-sounds {
+      display: flex; gap: 14px; flex-wrap: nowrap;
       justify-content: center; align-items: center; width: 100%;
       min-height: 20px;
     }
+    #stimulus-images { margin-bottom: 10px; }
+    #stimulus-images .item, #stimulus-sounds .item { flex: 0 0 auto; }
     #stimulus-empty { color: #bbb; font-size: .85rem; display: none; pointer-events: none; }
 
     /* Canvas: free-position area with 2×2 grid of zones */
@@ -283,6 +295,16 @@
 </head>
 <body>
 
+  <!-- WINDOW-TOO-SMALL GATE -->
+  <div id="size-gate">
+    <div>
+      <h2>Please enlarge your browser window</h2>
+      <p id="size-gate-msg"></p>
+      <p class="small-note">Maximise the window, or press <strong>F11</strong> (Windows) /
+        <strong>⌃⌘F</strong> (Mac) for full screen. This message disappears by itself.</p>
+    </div>
+  </div>
+
   <!-- CONSENT -->
   <div id="consent-screen" class="screen active">
     <h1>Participant Information &amp; Consent</h1>
@@ -311,6 +333,8 @@
       <p><strong>Your task is to match each image with the sound that fits it best.</strong></p>
       <p>Drag each image and its best-fitting sound to the <strong>same group zone</strong>. There are four zones — one image and one sound in each.</p>
       <p>You can listen to each sound as many times as you like before deciding.</p>
+      <p><strong>Please maximise your browser window</strong> and keep it that way for the whole
+         task, so that all eight stimuli stay visible without scrolling.</p>
       <p>Next you will set your screen size, and then the task begins.</p>
     </div>
     <button class="btn-primary" id="start-btn">Continue</button>
@@ -336,9 +360,11 @@
 
     <div id="stimulus-bar">
       <div id="stimulus-bar-label">Match each image with the sound that fits it best — drag the pair into the same zone</div>
-      <div id="stimulus-items">
-        <span id="stimulus-empty">All items placed — drag them back here to reposition.</span>
+      <span id="stimulus-empty">All items placed — drag them back here to reposition.</span>
 
+      <!-- Row 1: the four images. Kept on a single line (no wrapping) so the four
+           stimuli are never split into an uneven 3+1 arrangement. -->
+      <div id="stimulus-images">
         <div class="item image-item" id="item-imgRFRM" draggable="true" data-type="image" data-id="imgRFRM">
           <img src="RFRM.png" onerror="this.style.background='#dde3ea'" alt="">
         </div>
@@ -351,7 +377,10 @@
         <div class="item image-item" id="item-imgSFRM" draggable="true" data-type="image" data-id="imgSFRM">
           <img src="SFRM.png" onerror="this.style.background='#c7d2e0'" alt="">
         </div>
+      </div>
 
+      <!-- Row 2: the four sounds -->
+      <div id="stimulus-sounds">
         <div class="item sound-item" id="item-soundRFRM" draggable="true" data-type="sound" data-id="soundRFRM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -527,7 +556,36 @@
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
+      checkViewport();
     }
+
+    // ── Window size enforcement ──────────────────────────────────────────────
+    // The image row is nowrap, so a window narrower than four calibrated images
+    // would cut them off rather than reflow. Block until there is room.
+    const MIN_H_4X4 = 620;
+    function requiredWidth4x4() {
+      const imgPx = Math.round(IMAGE_MM * pxPerMm);
+      return 4 * imgPx + 3 * 14 + 80;        // four images + gaps + padding
+    }
+    function checkViewport() {
+      const onTask = document.getElementById('task-screen').classList.contains('active')
+                  || document.getElementById('confirm-screen').classList.contains('active');
+      const needed = requiredWidth4x4();
+      const screenFits = !window.screen || window.screen.availWidth >= needed + 20;
+      const requiredW = screenFits ? needed : 0;   // never lock out a screen that cannot comply
+      const tooSmall = window.innerWidth < requiredW || window.innerHeight < MIN_H_4X4;
+      const gate = document.getElementById('size-gate');
+      gate.classList.toggle('show', onTask && tooSmall);
+      if (onTask && tooSmall) {
+        document.getElementById('size-gate-msg').textContent =
+          `Your window is ${window.innerWidth} × ${window.innerHeight} pixels. `
+          + `This experiment needs at least ${Math.max(requiredW, 0)} × ${MIN_H_4X4}.`;
+      }
+    }
+    window.addEventListener('resize', checkViewport);
+    window.addEventListener('orientationchange', checkViewport);
+    document.addEventListener('fullscreenchange', checkViewport);
+    setInterval(checkViewport, 1000);
 
     document.getElementById('start-btn').addEventListener('click', () => showScreen('calibration-screen'));
 
@@ -594,7 +652,8 @@
 
     // ── Stimulus bar drop (drag items back) ────────────────────────────────────
     const stimBar   = document.getElementById('stimulus-bar');
-    const stimItems = document.getElementById('stimulus-items');
+    const stimImages = document.getElementById('stimulus-images');
+    const stimSounds = document.getElementById('stimulus-sounds');
 
     stimBar.addEventListener('dragover', e => e.preventDefault());
     stimBar.addEventListener('drop', e => {
@@ -602,7 +661,8 @@
       if (!draggedId || locations[draggedId] === 'stimulus') return;
       const el = document.getElementById('item-' + draggedId);
       el.style.position = ''; el.style.left = ''; el.style.top = '';
-      stimItems.appendChild(el);
+      // return each item to its own row, so the two rows stay complete
+      (draggedId.startsWith('img') ? stimImages : stimSounds).appendChild(el);
       locations[draggedId] = 'stimulus';
       updateUI();
     });
