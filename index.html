@@ -286,6 +286,7 @@
       <p><strong>Your task is to match each image with the sound that fits it best.</strong></p>
       <p>Drag each image and its best-fitting sound to the <strong>same side</strong> of the screen — one pair on the left, the other on the right.</p>
       <p>You can listen to each sound as many times as you like before deciding.</p>
+      <p>The images and sounds appear in a <strong>random order</strong>, so their positions carry no meaning.</p>
     </div>
     <button class="btn-primary" id="start-btn">Start</button>
   </div>
@@ -498,6 +499,21 @@
     // ── Stimulus bar drop (drag items back) ────────────────────────────────────
     const stimBar   = document.getElementById('stimulus-bar');
     const stimItems = document.getElementById('stimulus-items');
+
+    // ── Randomize presentation order ─────────────────────────────────────────
+    // Images and sounds are shuffled INDEPENDENTLY, per participant. Previously
+    // both were in the same fixed order, so the nth image and the nth sound were
+    // always the same stimulus and position alone gave the matching away.
+    (function randomizeOrder() {
+      const shuffle = a => { a = a.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]];
+        } return a; };
+      const items = [...stimItems.querySelectorAll('.item')];
+      const imgs  = shuffle(items.filter(el => el.dataset.type === 'image'));
+      const snds  = shuffle(items.filter(el => el.dataset.type === 'sound'));
+      [...imgs, ...snds].forEach(el => stimItems.appendChild(el));
+    })();
 
     stimBar.addEventListener('dragover', e => e.preventDefault());
     stimBar.addEventListener('drop', e => {
