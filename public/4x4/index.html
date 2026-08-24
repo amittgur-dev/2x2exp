@@ -655,6 +655,26 @@
     const stimImages = document.getElementById('stimulus-images');
     const stimSounds = document.getElementById('stimulus-sounds');
 
+    // ── Randomize presentation order ─────────────────────────────────────────
+    // The two rows are shuffled INDEPENDENTLY, per participant. Previously both
+    // rows were in the same fixed order, so the nth image and the nth sound were
+    // always the same stimulus — position alone gave the matching away.
+    function shuffleChildren(container) {
+      const kids = [...container.children];
+      for (let i = kids.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [kids[i], kids[j]] = [kids[j], kids[i]];
+      }
+      kids.forEach(k => container.appendChild(k));
+    }
+    function orderOf(container) {
+      return [...container.children].map(el => el.dataset.id.replace(/^(img|sound)/, '')).join(',');
+    }
+    shuffleChildren(stimImages);
+    shuffleChildren(stimSounds);
+    const imageOrder = orderOf(stimImages);
+    const soundOrder = orderOf(stimSounds);
+
     stimBar.addEventListener('dragover', e => e.preventDefault());
     stimBar.addEventListener('drop', e => {
       e.preventDefault();
