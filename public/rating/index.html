@@ -55,8 +55,9 @@
 
     /* image comparisons: all four on ONE row when there is room, wrapping to 2x2
        only on screens too narrow to fit four calibrated stimuli side by side */
-    .comp-list.grid { display: flex; flex-direction: row; flex-wrap: wrap;
-                      justify-content: center; align-items: flex-start;
+    /* Explicit column count — a wrapping flex row can end up 3+1, which puts the
+       four stimuli in an asymmetric arrangement. A grid is always exactly 4 or 2. */
+    .comp-list.grid { display: grid; justify-content: center; align-items: start;
                       gap: 12px; max-width: 100%; }
     .comp-cell { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
                  padding: 12px 14px; display: flex; flex-direction: column;
@@ -78,8 +79,8 @@
     #block-screen .box { text-align: center; max-width: 560px; }
     #block-screen .box p { margin-bottom: 0; font-size: 1.05rem; }
     #familiarize { margin: 0 auto 22px; max-width: 100%; }
-    #fam-sounds, #fam-images { display: flex; justify-content: center;
-                               flex-wrap: wrap; gap: 12px; }
+    #fam-sounds { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+    #fam-images { display: grid; justify-content: center; justify-items: center; gap: 12px; }
     #fam-images img { display: block; }
     #resume-screen .box { text-align: center; max-width: 560px; }
     #resume-screen .box p { margin-bottom: 0; font-size: 1.05rem; }
@@ -87,9 +88,25 @@
     #submit-status.error { color: #b91c1c; }
     #submit-status.info  { color: #6b7280; }
     #retry-btn { margin-top: 12px; }
+    /* blocking overlay whenever the window is too small for the stimuli */
+    #size-gate { display: none; position: fixed; inset: 0; background: #fff; z-index: 999;
+                 align-items: center; justify-content: center; text-align: center; padding: 24px; }
+    #size-gate.show { display: flex; }
+    #size-gate h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 12px; }
+    #size-gate p { margin-bottom: 10px; line-height: 1.55; }
   </style>
 </head>
 <body>
+
+  <!-- ═══ WINDOW-TOO-SMALL GATE ═══ -->
+  <div id="size-gate">
+    <div>
+      <h2>Please enlarge your browser window</h2>
+      <p id="size-gate-msg"></p>
+      <p class="small">Maximise the window, or press <strong>F11</strong> (Windows) /
+        <strong>⌃⌘F</strong> (Mac) for full screen. This message disappears by itself.</p>
+    </div>
+  </div>
 
   <!-- ═══ CONSENT ═══ -->
   <div id="consent-screen" class="screen active">
@@ -256,7 +273,66 @@ function playGated(audio, btn, onComplete) {
 }
 
 const showScreen = id => { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-                           document.getElementById(id).classList.add('active'); };
+                           document.getElementById(id).classList.add('active');
+                           checkViewport(); };
+
+// ── Window size enforcement ──────────────────────────────────────────────────
+// Asking politely is not enough: on the stimulus screens a window that is too
+// small forces scrolling, so the four items can no longer be compared at a
+// glance. Block progress until there is room, and re-check on every resize.
+const MIN_H = 640, GRID_GAP = 12, CELL_PAD = 30, BODY_PAD = 40;
+
+function stimulusImgPx()  { return Math.round(IMAGE_MM * pxPerMm); }
+function stimulusCellPx() { return Math.max(stimulusImgPx(), 200) + CELL_PAD; }
+function widthNeededFor(cols) {
+  return cols * stimulusCellPx() + (cols - 1) * GRID_GAP + BODY_PAD;
+}
+
+// Four across is preferred: it is symmetric, shorter, and lets all four be
+// compared at a glance. Fall back to 2x2 only when the participant's MONITOR
+// genuinely cannot fit four calibrated stimuli — never merely because their
+// window is small (that case is handled by the gate below).
+function stimulusColumns() {
+  return window.innerWidth >= widthNeededFor(4) ? 4 : 2;
+}
+
+function applyStimulusColumns() {
+  const cols = stimulusColumns();
+  const list = document.getElementById('comp-list');
+  if (list && list.classList.contains('grid')) {
+    list.style.gridTemplateColumns = `repeat(${cols}, ${stimulusCellPx()}px)`;
+  }
+  const fam = document.getElementById('fam-images');
+  if (fam) fam.style.gridTemplateColumns = `repeat(${cols}, ${stimulusImgPx()}px)`;
+}
+
+function checkViewport() {
+  applyStimulusColumns();
+  const onStimulusScreen =
+       document.getElementById('familiarize-screen').classList.contains('active')
+    || document.getElementById('trial-screen').classList.contains('active');
+
+  // Demand a one-row window only if the screen could actually supply it.
+  const needed4 = widthNeededFor(4);
+  const screenFitsFour = !window.screen || window.screen.availWidth >= needed4 + 20;
+  const requiredW = screenFitsFour ? needed4 : widthNeededFor(2);
+
+  const tooSmall = window.innerWidth < requiredW || window.innerHeight < MIN_H;
+  const gate = document.getElementById('size-gate');
+  gate.classList.toggle('show', onStimulusScreen && tooSmall);
+  if (onStimulusScreen && tooSmall) {
+    document.getElementById('size-gate-msg').textContent =
+      `Your window is ${window.innerWidth} × ${window.innerHeight} pixels. `
+      + `This experiment needs at least ${requiredW} × ${MIN_H}.`;
+  }
+}
+window.addEventListener('resize', checkViewport);
+window.addEventListener('orientationchange', checkViewport);
+document.addEventListener('fullscreenchange', checkViewport);
+// Safety net: some resize paths (browser zoom, certain window managers, leaving
+// fullscreen) do not reliably fire 'resize'. A 1s poll costs nothing and makes
+// the gate depend on the measurement rather than on an event arriving.
+setInterval(checkViewport, 1000);
 
 // ── Checkpointing ────────────────────────────────────────────────────────────
 // The only copy of a participant's work lives in `allRatings` until the final
@@ -295,7 +371,13 @@ document.getElementById('consent-box').addEventListener('change', e =>
   document.getElementById('consent-btn').disabled = !e.target.checked);
 // Flow: consent -> instructions -> calibration -> familiarization -> task
 document.getElementById('consent-btn').addEventListener('click', () => showScreen('start-screen'));
-document.getElementById('instructions-btn').addEventListener('click', () => showScreen('calibration-screen'));
+document.getElementById('instructions-btn').addEventListener('click', () => {
+  // Best-effort: browsers only grant fullscreen from a user gesture, and the
+  // participant can leave it at any time — the size gate is the real guarantee.
+  const el = document.documentElement;
+  if (el.requestFullscreen) { try { el.requestFullscreen().catch(() => {}); } catch (e) {} }
+  showScreen('calibration-screen');
+});
 document.getElementById('start-btn').addEventListener('click', () => showBlockIntro());
 
 // ── Calibration (identical mechanism to the 4×4 task) ────────────────────────
@@ -333,6 +415,7 @@ function renderFamiliarization() {
   });
   document.getElementById('fam-images').innerHTML =
     shuffle(STIMULI).map(s => imgTag(s, IMAGE_MM)).join('');
+  applyStimulusColumns();
   updateFamGate();
 }
 
@@ -428,6 +511,7 @@ function renderTrial() {
     }
     list.appendChild(el);
   });
+  applyStimulusColumns();
 
   list.querySelectorAll('.play-btn').forEach(b => b.onclick = () => {
     const c = b.dataset.comp;
