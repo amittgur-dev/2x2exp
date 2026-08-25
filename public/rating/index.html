@@ -483,7 +483,9 @@ function renderTrial() {
     document.getElementById('ref-play').onclick = () => {
       const btn = document.getElementById('ref-play');
       playGated(audioCache[t.reference], btn, () => {
+        const first = trialState.refPlays === 0;
         trialState.refPlays++;
+        if (first) unlockAllSliders();     // rating is only possible after listening
         updateGate();
       });
     };
@@ -496,9 +498,13 @@ function renderTrial() {
   t.comparisons.forEach(c => {
     const init = NEUTRAL_START;                           // neutral start — no per-item anchor
     trialState.initialSlider[c] = init;
+    // Sliders start locked in BOTH directions. With an image reference each
+    // slider unlocks when its own sound finishes; with a sound reference they all
+    // unlock once the reference has been heard, so no image can be rated before
+    // the sound it is being compared to.
     const sliderHTML = `
-      <div class="slider-cell ${isImageComparison ? '' : 'locked'}" id="cell-${c}">
-        <input type="range" min="1" max="100" value="${init}" class="untouched" data-comp="${c}"${isImageComparison ? '' : ' disabled'}>
+      <div class="slider-cell locked" id="cell-${c}">
+        <input type="range" min="1" max="100" value="${init}" class="untouched" data-comp="${c}" disabled>
         <div class="anchors"><span>least similar</span>
           <span class="rating-val unset" id="val-${c}">—</span>
           <span>most similar</span></div>
@@ -542,6 +548,14 @@ function renderTrial() {
 
   document.getElementById('next-btn').disabled = true;
   updateGate();
+}
+
+function unlockAllSliders() {
+  document.querySelectorAll('#comp-list .slider-cell').forEach(cell => {
+    cell.classList.remove('locked');
+    const sl = cell.querySelector('input[type=range]');
+    if (sl) sl.disabled = false;
+  });
 }
 
 function updateGate() {
