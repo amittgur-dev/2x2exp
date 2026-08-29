@@ -13,6 +13,13 @@ const PROLIFIC_COMPLETION_URL = 'https://app.prolific.com/submissions/complete?c
 const PROLIFIC_COMPLETION_URL_4X4 = 'https://app.prolific.com/submissions/complete?cc=C1K5H2UT';
 
 
+// ── Destination tables ───────────────────────────────────────────────────────
+// Change these to start a clean collection; the old table keeps its history.
+// A new table must have RLS disabled or every insert is rejected (see notes).
+const TABLE_2X2    = 'results';
+const TABLE_4X4    = 'results_4x4_v2';
+const TABLE_RATING = 'ratings_v2';
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
@@ -45,7 +52,7 @@ app.post('/submit', async (req, res) => {
     response_time_ms
   };
 
-  const { error } = await supabase.from('results').insert(row);
+  const { error } = await supabase.from(TABLE_2X2).insert(row);
 
   if (error) {
     console.error('Supabase error:', error);
@@ -86,7 +93,7 @@ app.post('/submit-4x4', async (req, res) => {
     px_per_mm
   };
 
-  const { error } = await supabase.from('results_4x4').insert(row);
+  const { error } = await supabase.from(TABLE_4X4).insert(row);
 
   if (error) {
     console.error('Supabase error (4x4):', error);
@@ -142,7 +149,7 @@ app.post('/submit-ratings', async (req, res) => {
     return row;
   });
 
-  const { error } = await supabase.from('ratings').insert(rows);
+  const { error } = await supabase.from(TABLE_RATING).insert(rows);
 
   if (error) {
     console.error('Supabase error (ratings):', error);
@@ -162,4 +169,7 @@ app.post('/submit-ratings', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Matching task running → http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Matching task running → http://localhost:${PORT}`);
+  console.log(`Tables → 2x2: ${TABLE_2X2} | 4x4: ${TABLE_4X4} | rating: ${TABLE_RATING}`);
+});
