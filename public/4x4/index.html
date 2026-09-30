@@ -103,6 +103,10 @@
     .btn-primary:disabled { background: #b9c4d2; cursor: default; }
 
     /* ── Task screen ─────────────────────────────────────────── */
+    /* The task and confirmation pages grow with their content and the whole page
+       scrolls: at the calibrated size, the stimuli plus four zones that each hold
+       a full-size image are taller than most laptop windows. */
+    #task-screen, #confirm-screen { height: auto; min-height: 100%; }
     #task-screen { background: #e8ecf0; }
 
     /* Stimulus bar */
@@ -115,80 +119,70 @@
       flex-direction: column;
       align-items: center;
       gap: 8px;
+      transition: box-shadow .15s;
     }
+    #stimulus-bar.drag-over { box-shadow: inset 0 0 0 3px rgba(37,99,235,.35); }
     #stimulus-bar-label {
       font-size: 1rem; font-weight: 700; color: #374151;
       text-align: center;
     }
+    #stimulus-rows { position: relative; width: 100%; }
     /* Two complete rows: images above, sounds below. nowrap means four items
-       always stay on one line — they can never break into an uneven 3+1. */
+       always stay on one line — they can never break into an uneven 3+1.
+       Each row keeps its full height when emptied, so the zones below never move. */
     #stimulus-images, #stimulus-sounds {
       display: flex; gap: 14px; flex-wrap: nowrap;
       justify-content: center; align-items: center; width: 100%;
-      min-height: 20px;
     }
-    #stimulus-images { margin-bottom: 10px; }
+    #stimulus-images { margin-bottom: 10px; min-height: var(--img-h, 120px); }
+    #stimulus-sounds { min-height: 90px; }
     #stimulus-images .item, #stimulus-sounds .item { flex: 0 0 auto; }
-    #stimulus-empty { color: #bbb; font-size: .85rem; display: none; pointer-events: none; }
+    #stimulus-empty {
+      position: absolute; left: 0; right: 0; top: 0; height: var(--img-h, 120px);
+      display: none; align-items: center; justify-content: center;
+      color: #9ca3af; font-size: .9rem; pointer-events: none;
+    }
+    /* marks an item's place in the row while it is being dragged */
+    .item-placeholder { flex: 0 0 auto; border: 2px dashed #cbd5e1; border-radius: 10px; }
 
-    /* Canvas: free-position area with 2×2 grid of zones */
+    /* Canvas: four group zones in a 2×2 grid. The zones are white, like the
+       images' own background, and each is exactly tall enough for a label band
+       plus one full-size image (height set from the calibration). */
     #canvas {
-      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: var(--zone-h, 300px) var(--zone-h, 300px);
+      gap: 12px;
+      padding: 12px 16px;
+    }
+    .zone {
       position: relative;
-      overflow: hidden;
+      background: #fff;
+      border: 2px solid #d1d5db;
+      border-radius: 10px;
+      transition: border-color .15s, box-shadow .15s;
     }
+    .zone.invalid   { border-color: #dc2626; }
+    .zone.drag-over { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.2); }
 
-    /* Quadrant backgrounds */
-    .quadrant {
-      position: absolute;
-      width: 50%; height: 50%;
-      transition: background .2s;
-      pointer-events: none;
-    }
-    #q-g1 { top: 0;    left: 0;    background: #f4f5f7; }
-    #q-g2 { top: 0;    right: 0;   background: #eef0f3; }
-    #q-g3 { bottom: 0; left: 0;    background: #eef0f3; }
-    #q-g4 { bottom: 0; right: 0;   background: #f4f5f7; }
-
-    .quadrant.invalid   { background: #fee2e2; }
-    .quadrant.drag-over { background: #dbeafe; }
-
-    /* Dividers */
-    #divider-h {
-      position: absolute; top: 50%; left: 0; right: 0;
-      height: 2px; background: #d1d5db; pointer-events: none;
-    }
-    #divider-v {
-      position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 2px; background: #d1d5db; pointer-events: none;
-    }
-
-    /* Group labels */
+    /* Group labels (top band of each zone; items never enter it) */
     .group-label {
-      position: absolute;
+      position: absolute; top: 8px; left: 12px;
       font-size: 1rem; font-weight: 700;
       pointer-events: none;
       transition: color .2s;
       color: #9ca3af;
-      z-index: 1;
     }
-    #label-g1 { top: 10px;               left: 14px; }
-    #label-g2 { top: 10px;               left: calc(50% + 14px); }
-    #label-g3 { top: calc(50% + 10px);   left: 14px; }
-    #label-g4 { top: calc(50% + 10px);   left: calc(50% + 14px); }
+    .zone.invalid .group-label { color: #dc2626; }
 
     /* Zone hints */
     .canvas-hint {
-      position: absolute;
-      font-size: .88rem; color: #c0c7d0;
-      pointer-events: none; text-align: center;
-      width: 170px;
+      position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%);
+      width: 170px; text-align: center;
+      font-size: .88rem; color: #aab2bd;
+      pointer-events: none;
     }
-    #hint-g1 { top: 25%; left: 25%; }
-    #hint-g2 { top: 25%; left: 75%; }
-    #hint-g3 { top: 75%; left: 25%; }
-    #hint-g4 { top: 75%; left: 75%; }
 
     /* Draggable items */
     .item {
@@ -197,16 +191,22 @@
       align-items: center;
       gap: 6px;
       cursor: grab;
-      user-select: none;
-      transition: opacity .15s;
+      user-select: none; -webkit-user-select: none;
+      touch-action: none;          /* a drag on a touch screen is not taken over by scrolling */
       z-index: 10;
     }
-    .item.dragging { opacity: .3; cursor: grabbing; }
+    .item img { -webkit-user-drag: none; pointer-events: none; }
+    .zone .item { position: absolute; }
+    .zone .sound-item { z-index: 11; }   /* a sound is never hidden behind an image */
+    .item.dragging { z-index: 900; pointer-events: none; }
+    .item.snapping { transition: left .18s ease-out, top .18s ease-out; }
+    body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 
     .image-item { padding: 0; background: none; border: none; }
     .image-item img { object-fit: contain; background: transparent; display: block; }
 
     .sound-item { background: none; border: none; padding: 0; }
+    .sound-item.dragging .sound-icon { box-shadow: 0 8px 20px rgba(0,0,0,.18); }
     .sound-icon {
       width: 90px; height: 90px;
       border-radius: 10px;
@@ -226,21 +226,35 @@
     .play-btn:hover   { background: #1d4ed8; }
     .play-btn.playing { background: #dc2626; }
 
-    /* Bottom bar */
+    /* Bottom bar: slim, and always in view while the page scrolls */
     #bottom-bar {
       flex-shrink: 0; background: #fff;
       border-top: 2px solid #d1d5db;
-      padding: 12px 32px;
+      padding: 6px 24px;
       display: flex; align-items: center;
       justify-content: space-between; gap: 16px;
+      position: sticky; bottom: 0; z-index: 50;
+      margin-top: auto;
     }
+    #bottom-bar .btn-primary { padding: 8px 30px; font-size: 1rem; }
     #notification {
       flex: 1; display: flex; align-items: center;
-      gap: 8px; font-size: 1.05rem; font-weight: 700; min-height: 1.4em;
+      gap: 8px; font-size: .98rem; font-weight: 700; min-height: 1.4em;
     }
     #notification.error { color: #b91c1c; }
     #notification.ready { color: #15803d; }
     #notification.info  { color: #6b7280; }
+
+    /* "Scroll down" cue, shown while part of the page is below the window */
+    #scroll-cue {
+      position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%);
+      z-index: 60; display: none;
+      padding: 6px 16px; border: none; border-radius: 999px;
+      background: rgba(31,41,55,.85); color: #fff;
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    #scroll-cue.show { display: block; }
 
     /* Confirmation screen */
     #confirm-screen {
@@ -249,35 +263,30 @@
     }
     #confirm-header {
       flex-shrink: 0; background: #fff; border-bottom: 2px solid #d1d5db;
-      padding: 16px 32px; text-align: center;
+      padding: 10px 32px; text-align: center;
     }
-    #confirm-header h2 { font-size: 1.4rem; font-weight: 700; }
-    .confirm-sub { color: #555; line-height: 1.6; font-size: .95rem; margin-top: 6px; }
+    #confirm-header h2 { font-size: 1.35rem; font-weight: 700; }
+    .confirm-sub { color: #555; line-height: 1.5; font-size: .95rem; margin-top: 4px; }
 
+    /* Same white zones as in the task, with the image and its sound side by side */
     #confirm-groups {
-      flex: 1;
+      flex: 1 0 auto;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
-      overflow: hidden;
-      position: relative;
+      grid-template-rows: var(--zone-h, 300px) var(--zone-h, 300px);
+      gap: 12px; padding: 12px 16px;
+      align-content: center;
     }
     .confirm-cell {
       position: relative;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 14px; padding: 16px;
-      border-right: 2px solid #d1d5db;
-      border-bottom: 2px solid #d1d5db;
+      display: flex; align-items: center; justify-content: center;
+      padding: 36px 14px 14px;          /* top band for the group title, as in the task */
+      background: #fff; border: 2px solid #d1d5db; border-radius: 10px;
     }
-    .confirm-cell:nth-child(2) { border-right: none; }
-    .confirm-cell:nth-child(3),
-    .confirm-cell:nth-child(4) { border-bottom: none; }
-    .confirm-cell:nth-child(4) { border-right: none; }
 
     .confirm-group-title {
       position: absolute; top: 8px; left: 12px;
-      font-weight: 700; font-size: .95rem; color: #9ca3af;
+      font-weight: 700; font-size: 1rem; color: #9ca3af;
       pointer-events: none;
     }
     .confirm-cell img { object-fit: contain; background: transparent; display: block; }
@@ -286,12 +295,15 @@
 
     #confirm-footer {
       flex-shrink: 0; background: #fff; border-top: 2px solid #d1d5db;
-      padding: 12px 32px; display: flex; align-items: center;
+      padding: 6px 24px; display: flex; align-items: center;
       justify-content: space-between; gap: 16px;
+      position: sticky; bottom: 0; z-index: 50;
     }
-    #confirm-question { flex: 1; font-size: 1.05rem; font-weight: 700; color: #6b7280; }
+    #confirm-question { flex: 1; font-size: .98rem; font-weight: 700; color: #6b7280; }
     #confirm-question.ready { color: #222; }
-    #confirm-buttons { display: flex; gap: 14px; flex-wrap: wrap; }
+    #confirm-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+    #confirm-footer .btn-primary   { padding: 8px 26px; font-size: 1rem; }
+    #confirm-footer .btn-secondary { padding: 6px 18px; font-size: .95rem; }
     .btn-secondary {
       padding: 12px 28px; font-size: 1rem; font-weight: 600;
       background: #fff; color: #374151;
@@ -352,8 +364,8 @@
       <p>Drag each image and its best-fitting sound to the <strong>same group zone</strong>. There are four zones — one image and one sound in each.</p>
       <p>You can listen to each sound as many times as you like before deciding.</p>
       <p>The images and sounds appear in a <strong>random order</strong>, so their positions carry no meaning.</p>
-      <p><strong>Please maximise your browser window</strong> and keep it that way for the whole
-         task, so that all eight stimuli stay visible without scrolling.</p>
+      <p><strong>Please maximise your browser window</strong> and keep it that way for the whole task.
+         You can scroll the page at any time — while dragging, just move towards the top or bottom edge of the window.</p>
       <p>Next you will set your screen size, and then the task begins.</p>
     </div>
     <button class="btn-primary" id="start-btn">Continue</button>
@@ -379,28 +391,29 @@
 
     <div id="stimulus-bar">
       <div id="stimulus-bar-label">Match each image with the sound that fits it best — drag the pair into the same zone</div>
+      <div id="stimulus-rows">
       <span id="stimulus-empty">All items placed — drag them back here to reposition.</span>
 
       <!-- Row 1: the four images. Kept on a single line (no wrapping) so the four
            stimuli are never split into an uneven 3+1 arrangement. -->
       <div id="stimulus-images">
-        <div class="item image-item" id="item-imgRFRM" draggable="true" data-type="image" data-id="imgRFRM">
-          <img src="RFRM.png" onerror="this.style.background='#dde3ea'" alt="">
+        <div class="item image-item" id="item-imgRFRM" data-type="image" data-id="imgRFRM">
+          <img draggable="false" src="RFRM.png" onerror="this.style.background='#dde3ea'" alt="">
         </div>
-        <div class="item image-item" id="item-imgRFSM" draggable="true" data-type="image" data-id="imgRFSM">
-          <img src="RFSM.png" onerror="this.style.background='#dde3ea'" alt="">
+        <div class="item image-item" id="item-imgRFSM" data-type="image" data-id="imgRFSM">
+          <img draggable="false" src="RFSM.png" onerror="this.style.background='#dde3ea'" alt="">
         </div>
-        <div class="item image-item" id="item-imgSFSM" draggable="true" data-type="image" data-id="imgSFSM">
-          <img src="SFSM.png" onerror="this.style.background='#c7d2e0'" alt="">
+        <div class="item image-item" id="item-imgSFSM" data-type="image" data-id="imgSFSM">
+          <img draggable="false" src="SFSM.png" onerror="this.style.background='#c7d2e0'" alt="">
         </div>
-        <div class="item image-item" id="item-imgSFRM" draggable="true" data-type="image" data-id="imgSFRM">
-          <img src="SFRM.png" onerror="this.style.background='#c7d2e0'" alt="">
+        <div class="item image-item" id="item-imgSFRM" data-type="image" data-id="imgSFRM">
+          <img draggable="false" src="SFRM.png" onerror="this.style.background='#c7d2e0'" alt="">
         </div>
       </div>
 
       <!-- Row 2: the four sounds -->
       <div id="stimulus-sounds">
-        <div class="item sound-item" id="item-soundRFRM" draggable="true" data-type="sound" data-id="soundRFRM">
+        <div class="item sound-item" id="item-soundRFRM" data-type="sound" data-id="soundRFRM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
@@ -410,7 +423,7 @@
             <button class="play-btn" data-audio="soundRFRM">&#9654; Play</button>
           </div>
         </div>
-        <div class="item sound-item" id="item-soundRFSM" draggable="true" data-type="sound" data-id="soundRFSM">
+        <div class="item sound-item" id="item-soundRFSM" data-type="sound" data-id="soundRFSM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
@@ -420,7 +433,7 @@
             <button class="play-btn" data-audio="soundRFSM">&#9654; Play</button>
           </div>
         </div>
-        <div class="item sound-item" id="item-soundSFSM" draggable="true" data-type="sound" data-id="soundSFSM">
+        <div class="item sound-item" id="item-soundSFSM" data-type="sound" data-id="soundSFSM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
@@ -430,7 +443,7 @@
             <button class="play-btn" data-audio="soundSFSM">&#9654; Play</button>
           </div>
         </div>
-        <div class="item sound-item" id="item-soundSFRM" draggable="true" data-type="sound" data-id="soundSFRM">
+        <div class="item sound-item" id="item-soundSFRM" data-type="sound" data-id="soundSFRM">
           <div class="sound-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
@@ -441,24 +454,15 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
 
-    <!-- Free-position canvas with 4 zones -->
+    <!-- Four group zones (2×2). Items dropped in a zone become its children. -->
     <div id="canvas">
-      <div class="quadrant" id="q-g1"></div>
-      <div class="quadrant" id="q-g2"></div>
-      <div class="quadrant" id="q-g3"></div>
-      <div class="quadrant" id="q-g4"></div>
-      <div id="divider-h"></div>
-      <div id="divider-v"></div>
-      <span class="group-label" id="label-g1">Group 1</span>
-      <span class="group-label" id="label-g2">Group 2</span>
-      <span class="group-label" id="label-g3">Group 3</span>
-      <span class="group-label" id="label-g4">Group 4</span>
-      <span class="canvas-hint" id="hint-g1">Drag one image + one sound here</span>
-      <span class="canvas-hint" id="hint-g2">Drag one image + one sound here</span>
-      <span class="canvas-hint" id="hint-g3">Drag one image + one sound here</span>
-      <span class="canvas-hint" id="hint-g4">Drag one image + one sound here</span>
+      <div class="zone" id="zone-g1"><span class="group-label">Group 1</span><span class="canvas-hint" id="hint-g1">Drag one image + one sound here</span></div>
+      <div class="zone" id="zone-g2"><span class="group-label">Group 2</span><span class="canvas-hint" id="hint-g2">Drag one image + one sound here</span></div>
+      <div class="zone" id="zone-g3"><span class="group-label">Group 3</span><span class="canvas-hint" id="hint-g3">Drag one image + one sound here</span></div>
+      <div class="zone" id="zone-g4"><span class="group-label">Group 4</span><span class="canvas-hint" id="hint-g4">Drag one image + one sound here</span></div>
     </div>
 
     <div id="bottom-bar">
@@ -536,6 +540,8 @@
     <p id="redirect-msg">You will be redirected to Prolific in a moment...</p>
   </div>
 
+  <button id="scroll-cue" type="button">Scroll down &#9662;</button>
+
   <audio id="audio-soundRFRM" src="RFRM.wav" style="display:none"></audio>
   <audio id="audio-soundRFSM" src="RFSM.wav" style="display:none"></audio>
   <audio id="audio-soundSFSM" src="SFSM.wav" style="display:none"></audio>
@@ -551,6 +557,11 @@
                            // IMAGE_MM is the WIDTH of the (cropped) image box.
     const IMG_ASPECT = 0.8375;   // height/width of the common crop shared by all four images
     const MIN_GAP_MM = 10;       // minimum edge-to-edge distance between neighbouring images
+    // A group zone is a label band on top plus exactly one full-size image height,
+    // so a dropped image always fits inside its zone without being resized.
+    const LABEL_BAND  = 36;      // px at the top of a zone kept free for its "Group N" label
+    const ZONE_PAD    = 14;      // px kept free between an item and the zone's other edges
+    const ZONE_BORDER = 2;       // px, matches .zone border
 
     let pxPerMm = 96 / 25.4;
 
@@ -579,13 +590,19 @@
       showScreen('task-screen');
     });
 
+    function imgWidthPx()  { return Math.round(IMAGE_MM * pxPerMm); }
+    function imgHeightPx() { return Math.round(imgWidthPx() * IMG_ASPECT); }
+
     function applyImageSize() {
-      const px = Math.round(IMAGE_MM * pxPerMm);
+      const w = imgWidthPx(), h = imgHeightPx();
       document.querySelectorAll('.image-item img').forEach(img => {
-        img.style.width = px + 'px'; img.style.height = Math.round(px * IMG_ASPECT) + 'px';
+        img.style.width = w + 'px'; img.style.height = h + 'px';
       });
       // calibrated minimum distance between neighbouring images in the stimulus row
       document.getElementById('stimulus-images').style.gap = minGapPx() + 'px';
+      const root = document.documentElement.style;
+      root.setProperty('--img-h', h + 'px');
+      root.setProperty('--zone-h', (LABEL_BAND + h + ZONE_PAD + 2 * ZONE_BORDER) + 'px');
     }
     function minGapPx() { return Math.ceil(MIN_GAP_MM * pxPerMm); }   // ceil: never below the minimum
 
@@ -594,7 +611,8 @@
     const locations = {};
     STIMULI.forEach(s => { locations['img' + s] = 'stimulus'; locations['sound' + s] = 'stimulus'; });
 
-    let draggedId = null, dragOffsetX = 0, dragOffsetY = 0;
+    let press = null;            // button down on an item, not yet moved far enough to drag
+    let drag  = null;            // the item being dragged
     let startTime = null;
 
     const urlParams       = new URLSearchParams(window.location.search);
@@ -605,7 +623,9 @@
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(id).classList.add('active');
+      window.scrollTo(0, 0);           // the task and confirmation pages can be taller than the window
       checkViewport();
+      updateScrollCue();
     }
 
     // ── Window size enforcement ──────────────────────────────────────────────
@@ -613,8 +633,7 @@
     // would cut them off rather than reflow. Block until there is room.
     const MIN_H_4X4 = 620;
     function requiredWidth4x4() {
-      const imgPx = Math.round(IMAGE_MM * pxPerMm);
-      return 4 * imgPx + 3 * minGapPx() + 48 + 16;   // images + calibrated gaps + bar padding + margin
+      return 4 * imgWidthPx() + 3 * minGapPx() + 48 + 16;   // images + calibrated gaps + bar padding + margin
     }
     function checkViewport() {
       const onTask = document.getElementById('task-screen').classList.contains('active')
@@ -638,71 +657,253 @@
 
     document.getElementById('start-btn').addEventListener('click', () => showScreen('calibration-screen'));
 
-    // ── Drag events on items ───────────────────────────────────────────────────
-    document.querySelectorAll('.item').forEach(el => {
-      el.addEventListener('dragstart', e => {
-        draggedId = el.dataset.id;
-        e.dataTransfer.effectAllowed = 'move';
-        const rect = el.getBoundingClientRect();
-        dragOffsetX = e.clientX - rect.left;
-        dragOffsetY = e.clientY - rect.top;
-        setTimeout(() => el.classList.add('dragging'), 0);
-      });
-      el.addEventListener('dragend', () => {
-        el.classList.remove('dragging');
-        draggedId = null;
-      });
-    });
-
-    // ── Canvas drop ────────────────────────────────────────────────────────────
-    const canvas    = document.getElementById('canvas');
-    const quadrants = { g1: document.getElementById('q-g1'), g2: document.getElementById('q-g2'),
-                        g3: document.getElementById('q-g3'), g4: document.getElementById('q-g4') };
-
-    function quadrantFor(relX, relY, rect) {
-      const isTop  = relY < rect.height / 2;
-      const isLeft = relX < rect.width  / 2;
-      return isTop ? (isLeft ? 'g1' : 'g2') : (isLeft ? 'g3' : 'g4');
-    }
-
-    canvas.addEventListener('dragover', e => {
-      e.preventDefault();
-      if (!draggedId) return;
-      const rect = canvas.getBoundingClientRect();
-      const g = quadrantFor(e.clientX - rect.left, e.clientY - rect.top, rect);
-      GROUPS.forEach(k => quadrants[k].classList.toggle('drag-over', k === g));
-    });
-
-    canvas.addEventListener('dragleave', e => {
-      if (!canvas.contains(e.relatedTarget)) {
-        GROUPS.forEach(k => quadrants[k].classList.remove('drag-over'));
-      }
-    });
-
-    canvas.addEventListener('drop', e => {
-      e.preventDefault();
-      GROUPS.forEach(k => quadrants[k].classList.remove('drag-over'));
-      if (!draggedId) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left - dragOffsetX;
-      const y = e.clientY - rect.top  - dragOffsetY;
-      const g = quadrantFor(e.clientX - rect.left, e.clientY - rect.top, rect);
-
-      const el = document.getElementById('item-' + draggedId);
-      el.style.position = 'absolute';
-      el.style.left = Math.max(0, x) + 'px';
-      el.style.top  = Math.max(0, y) + 'px';
-      canvas.appendChild(el);
-
-      locations[draggedId] = g;
-      updateUI();
-    });
-
-    // ── Stimulus bar drop (drag items back) ────────────────────────────────────
-    const stimBar   = document.getElementById('stimulus-bar');
+    // ── Dragging ───────────────────────────────────────────────────────────────
+    // Pointer-based rather than native HTML5 drag-and-drop, so that the item itself
+    // follows the pointer at full size; the page scrolls while dragging (towards
+    // the top or bottom edge of the window, or with the wheel / trackpad), so zones
+    // below the fold are reachable; and a dropped item settles fully inside its
+    // zone, next to — never on top of — whatever is already there.
+    const stimBar    = document.getElementById('stimulus-bar');
     const stimImages = document.getElementById('stimulus-images');
     const stimSounds = document.getElementById('stimulus-sounds');
+    const canvas     = document.getElementById('canvas');
+    const bottomBar  = document.getElementById('bottom-bar');
+    const scrollCue  = document.getElementById('scroll-cue');
+    const zones = {};
+    GROUPS.forEach(g => { zones[g] = document.getElementById('zone-' + g); });
+
+    const DRAG_START_PX = 5;     // movement that turns a press into a drag (a plain click still plays)
+    const EDGE_PX       = 80;    // auto-scroll band at the top and bottom of the window
+    const EDGE_DELAY_MS = 100;   // time in the band before auto-scroll starts
+    const MAX_SCROLL_PX = 18;    // scroll per frame at the very edge
+    let suppressClick = false;   // swallows the click the browser fires when a drag ends
+
+    document.querySelectorAll('#task-screen .item').forEach(el => {
+      el.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || press || drag) return;
+        e.preventDefault();                          // no text selection or native image drag
+        press = { el, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY };
+      });
+    });
+
+    window.addEventListener('pointermove', e => {
+      if (press && e.pointerId === press.pointerId) {
+        if (Math.hypot(e.clientX - press.x0, e.clientY - press.y0) >= DRAG_START_PX) startDrag(e.clientX, e.clientY);
+        return;
+      }
+      if (!drag || e.pointerId !== drag.pointerId) return;
+      if (e.pointerType === 'mouse' && e.buttons === 0) { cancelDrag(); return; }   // released outside the window
+      moveDrag(e.clientX, e.clientY);
+    });
+    window.addEventListener('pointerup', e => {
+      if (drag && e.pointerId === drag.pointerId) endDrag(e.clientX, e.clientY);
+      press = null;
+    });
+    window.addEventListener('pointercancel', () => { if (drag) cancelDrag(); press = null; });
+    window.addEventListener('blur',          () => { if (drag) cancelDrag(); press = null; });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape' && drag) cancelDrag(); });
+    window.addEventListener('click', e => {
+      if (suppressClick) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+    window.addEventListener('scroll', () => { if (drag) updateHover(); updateScrollCue(); }, { passive: true });
+
+    function startDrag(x, y) {
+      const el = press.el, r = el.getBoundingClientRect();
+      const fromZone = el.parentElement.classList.contains('zone') ? el.parentElement : null;
+      let placeholder = null;
+      if (!fromZone) {                               // keep its place in the row while it is away
+        placeholder = document.createElement('div');
+        placeholder.className = 'item-placeholder';
+        placeholder.style.width = r.width + 'px'; placeholder.style.height = r.height + 'px';
+        el.before(placeholder);
+      }
+      drag = { el, id: el.dataset.id, pointerId: press.pointerId,
+               offX: press.x0 - r.left, offY: press.y0 - r.top,
+               fromZone, fromLeft: el.style.left, fromTop: el.style.top, placeholder,
+               x, y, target: null, edgeSince: 0, raf: 0 };
+      press = null;
+      el.classList.remove('snapping');
+      el.classList.add('dragging');
+      el.style.position = 'fixed';
+      document.body.appendChild(el);                 // above everything, independent of scrolling
+      document.body.classList.add('is-dragging');
+      moveDrag(x, y);
+      drag.raf = requestAnimationFrame(autoScroll);
+      updateScrollCue();
+    }
+
+    function moveDrag(x, y) {
+      drag.x = x; drag.y = y;
+      drag.el.style.left = (x - drag.offX) + 'px';
+      drag.el.style.top  = (y - drag.offY) + 'px';
+      updateHover();
+    }
+
+    // Where a drop at (x, y) would go: 'stimulus', a zone, or null (nowhere —
+    // the item then returns to where it came from).
+    function dropTargetAt(x, y) {
+      if (y >= bottomBar.getBoundingClientRect().top) return null;   // hidden under the bottom bar
+      const bar = stimBar.getBoundingClientRect();
+      if (y >= bar.top && y <= bar.bottom) return 'stimulus';
+      const c = canvas.getBoundingClientRect();
+      if (x < c.left || x > c.right || y < c.top || y > c.bottom) return null;
+      let best = null, bestD = Infinity;             // the zone under the pointer, or the nearest one
+      GROUPS.forEach(g => {
+        const r = zones[g].getBoundingClientRect();
+        const dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
+        if (dx * dx + dy * dy < bestD) { bestD = dx * dx + dy * dy; best = g; }
+      });
+      return best;
+    }
+    function updateHover() {
+      drag.target = dropTargetAt(drag.x, drag.y);
+      GROUPS.forEach(g => zones[g].classList.toggle('drag-over', drag.target === g));
+      stimBar.classList.toggle('drag-over', drag.target === 'stimulus' && !!drag.fromZone);
+    }
+
+    // Scroll the page while the pointer rests near the top or bottom of the window.
+    function autoScroll(ts) {
+      if (!drag) return;
+      const top = EDGE_PX, bottom = bottomBar.getBoundingClientRect().top - EDGE_PX;
+      const v = drag.y < top    ? -Math.min(1, (top - drag.y) / EDGE_PX)
+              : drag.y > bottom ?  Math.min(1, (drag.y - bottom) / EDGE_PX) : 0;
+      if (v === 0) drag.edgeSince = 0;
+      else if (!drag.edgeSince) drag.edgeSince = ts;
+      else if (ts - drag.edgeSince > EDGE_DELAY_MS) {
+        window.scrollBy(0, Math.sign(v) * Math.max(2, Math.round(MAX_SCROLL_PX * v * v)));
+      }
+      drag.raf = requestAnimationFrame(autoScroll);
+    }
+
+    function finishDrag() {
+      const d = drag;
+      cancelAnimationFrame(d.raf);
+      GROUPS.forEach(g => zones[g].classList.remove('drag-over'));
+      stimBar.classList.remove('drag-over');
+      d.el.classList.remove('dragging');
+      document.body.classList.remove('is-dragging');
+      drag = null;
+      return d;
+    }
+    function endDrag(x, y) {
+      moveDrag(x, y);
+      const target = drag.target, rect = drag.el.getBoundingClientRect();
+      const d = finishDrag();
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      if (target === 'stimulus') returnToBar(d);
+      else if (target) placeInZone(d, target, rect);
+      else restoreOrigin(d);
+      updateUI(); updateScrollCue();
+    }
+    function cancelDrag() {
+      restoreOrigin(finishDrag());
+      updateUI(); updateScrollCue();
+    }
+
+    function restoreOrigin(d) {
+      if (d.fromZone) {
+        d.el.style.position = 'absolute';
+        d.el.style.left = d.fromLeft; d.el.style.top = d.fromTop;
+        d.fromZone.appendChild(d.el);
+      } else {
+        d.el.style.position = ''; d.el.style.left = ''; d.el.style.top = '';
+        d.placeholder.replaceWith(d.el);
+      }
+    }
+    function returnToBar(d) {
+      d.el.style.position = ''; d.el.style.left = ''; d.el.style.top = '';
+      // back to its own row, so the two rows stay complete
+      if (d.placeholder) d.placeholder.replaceWith(d.el);
+      else (d.id.startsWith('img') ? stimImages : stimSounds).appendChild(d.el);
+      locations[d.id] = 'stimulus';
+    }
+    function placeInZone(d, g, rect) {
+      const el = d.el, zone = zones[g];
+      if (d.placeholder) d.placeholder.remove();
+      const zr = zone.getBoundingClientRect();
+      const x = rect.left - zr.left - zone.clientLeft;   // where it was let go, in zone coordinates
+      const y = rect.top  - zr.top  - zone.clientTop;
+      zone.appendChild(el);
+      el.style.position = 'absolute';
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+      locations[d.id] = g;
+      applyLayout(layoutZone(zone, el, x), true);
+    }
+
+    // Positions for every item in a zone. Items stay inside the zone's edges and
+    // below its label band — an image fills the band's height, a sound is centred
+    // beside it — are never resized, and are kept at least the calibrated minimum
+    // distance apart, so an image never covers a sound. The item just dropped
+    // goes to the free spot nearest to where it was let go and the others stay
+    // put; only if there is no free spot are the zone's items lined up afresh.
+    function layoutZone(zone, moved, movedX) {
+      const gap = minGapPx();
+      const zw = zone.clientWidth, band = zone.clientHeight - LABEL_BAND - ZONE_PAD;
+      const boxes = [...zone.querySelectorAll('.item')].map(el => ({
+        el, w: el.offsetWidth, h: el.offsetHeight,
+        x: el === moved ? movedX : (parseFloat(el.style.left) || 0)
+      }));
+      const clampX  = (b, v) => Math.round(Math.max(ZONE_PAD, Math.min(zw - b.w - ZONE_PAD, v)));
+      const clearAt = (b, v) => boxes.every(o => o === b || v + b.w + gap <= o.x || v >= o.x + o.w + gap);
+      boxes.forEach(b => { b.x = clampX(b, b.x); });
+
+      const m = boxes.find(b => b.el === moved);
+      if (m && !clearAt(m, m.x)) {
+        const want = m.x;
+        const spots = boxes.filter(o => o !== m)
+          .flatMap(o => [o.x - m.w - gap, o.x + o.w + gap])
+          .map(v => clampX(m, v)).filter(v => clearAt(m, v));
+        if (spots.length) m.x = spots.reduce((a, v) => Math.abs(v - want) < Math.abs(a - want) ? v : a);
+      }
+      if (!boxes.every(b => clearAt(b, b.x))) {
+        boxes.sort((a, b) => (a.x + a.w / 2) - (b.x + b.w / 2));
+        const avail = zw - 2 * ZONE_PAD;
+        const total = boxes.reduce((s, b) => s + b.w, 0) + gap * (boxes.length - 1);
+        if (total <= avail) {
+          let x = ZONE_PAD + Math.round((avail - total) / 2);
+          boxes.forEach(b => { b.x = x; x += b.w + gap; });
+        } else {                                     // more items than fit (an error state that the
+          const last = boxes[boxes.length - 1].w;    // participant must fix): spread them out, and
+          const step = (avail - last) / Math.max(1, boxes.length - 1);   // sounds stay on top (CSS)
+          boxes.forEach((b, i) => { b.x = Math.round(ZONE_PAD + i * step); });
+        }
+      }
+      boxes.forEach(b => { b.y = LABEL_BAND + Math.max(0, Math.round((band - b.h) / 2)); });
+      return boxes;
+    }
+    function applyLayout(boxes, animate) {
+      boxes.forEach(b => {
+        if (animate) { void b.el.offsetWidth; b.el.classList.add('snapping'); }   // glide from where it is
+        b.el.style.left = b.x + 'px'; b.el.style.top = b.y + 'px';
+        if (animate) setTimeout(() => b.el.classList.remove('snapping'), 250);
+      });
+    }
+
+    // Keep items inside their zones if the window width changes.
+    let lastCanvasW = 0;
+    function onLayoutChange() {
+      const w = canvas.clientWidth;
+      if (w && w !== lastCanvasW) {
+        lastCanvasW = w;
+        GROUPS.forEach(g => applyLayout(layoutZone(zones[g], null, 0), false));
+      }
+      updateScrollCue();
+    }
+    window.addEventListener('resize', onLayoutChange);
+    setInterval(onLayoutChange, 1000);
+
+    // "Scroll down" cue while part of the task or confirmation page is out of view.
+    function updateScrollCue() {
+      const screen = ['task-screen', 'confirm-screen'].map(id => document.getElementById(id))
+                       .find(s => s.classList.contains('active'));
+      const hidden = document.documentElement.scrollHeight - window.innerHeight - window.scrollY;
+      const show = !!screen && !drag && hidden > 40;
+      scrollCue.classList.toggle('show', show);
+      if (show) scrollCue.style.bottom = (screen.querySelector('#bottom-bar, #confirm-footer').offsetHeight + 12) + 'px';
+    }
+    scrollCue.addEventListener('click', () =>
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }));
 
     // ── Randomize presentation order ─────────────────────────────────────────
     // The two rows are shuffled INDEPENDENTLY, per participant. Previously both
@@ -724,18 +925,6 @@
     const imageOrder = orderOf(stimImages);
     const soundOrder = orderOf(stimSounds);
 
-    stimBar.addEventListener('dragover', e => e.preventDefault());
-    stimBar.addEventListener('drop', e => {
-      e.preventDefault();
-      if (!draggedId || locations[draggedId] === 'stimulus') return;
-      const el = document.getElementById('item-' + draggedId);
-      el.style.position = ''; el.style.left = ''; el.style.top = '';
-      // return each item to its own row, so the two rows stay complete
-      (draggedId.startsWith('img') ? stimImages : stimSounds).appendChild(el);
-      locations[draggedId] = 'stimulus';
-      updateUI();
-    });
-
     // ── UI update ──────────────────────────────────────────────────────────────
     function countIn(zone, type) {
       return Object.entries(locations).filter(([id, loc]) => loc === zone && id.startsWith(type)).length;
@@ -743,7 +932,7 @@
 
     function updateUI() {
       const inStimulus = Object.values(locations).filter(l => l === 'stimulus').length;
-      document.getElementById('stimulus-empty').style.display = inStimulus === 0 ? 'block' : 'none';
+      document.getElementById('stimulus-empty').style.display = inStimulus === 0 ? 'flex' : 'none';
 
       const counts = {};
       let error = null;
@@ -755,10 +944,7 @@
       GROUPS.forEach(g => {
         const total = counts[g].imgs + counts[g].snds;
         document.getElementById('hint-' + g).style.display = total === 0 ? 'block' : 'none';
-        const invalid = counts[g].imgs > 1 || counts[g].snds > 1;
-        quadrants[g].classList.toggle('invalid', invalid);
-        const label = document.getElementById('label-' + g);
-        label.style.color = invalid ? '#dc2626' : '#9ca3af';
+        zones[g].classList.toggle('invalid', counts[g].imgs > 1 || counts[g].snds > 1);
       });
 
       for (const g of GROUPS) {
@@ -844,15 +1030,14 @@
       const container = document.getElementById(containerId);
       container.innerHTML = '';
       container.style.display = 'flex';
-      container.style.flexDirection = 'column';
+      container.style.flexDirection = 'row';        // image and sound side by side, as in the zones
       container.style.alignItems = 'center';
-      container.style.gap = '12px';
+      container.style.gap = minGapPx() + 'px';
 
-      const sizePx = Math.round(IMAGE_MM * pxPerMm);
       const img = document.createElement('img');
       img.src = imgId.replace('img', '') + '.png';
-      img.style.width  = sizePx + 'px';
-      img.style.height = Math.round(sizePx * IMG_ASPECT) + 'px';
+      img.style.width  = imgWidthPx() + 'px';
+      img.style.height = imgHeightPx() + 'px';
       img.style.objectFit = 'contain';
       container.appendChild(img);
 
