@@ -72,6 +72,23 @@
     #size-gate p { margin-bottom: 10px; line-height: 1.55; color: #444; }
     #size-gate .small-note { font-size: .88rem; color: #6b7280; }
 
+    #questionnaire-screen {
+      align-items: center; justify-content: center;
+      gap: 24px; padding: 40px 24px; text-align: center; overflow-y: auto;
+    }
+    #questionnaire-screen h1 { font-size: 1.8rem; font-weight: 700; }
+    #questionnaire-screen .instructions-box { max-width: 640px; width: 100%; }
+    /* ── Closing questionnaire ── */
+    .q-item { border: none; margin: 0 0 20px; padding: 0; }
+    .q-item legend, #music-years-wrap > label { display: block; font-weight: 600; color: #1f2937; margin-bottom: 10px; line-height: 1.5; }
+    .q-choice { display: inline-flex; align-items: center; gap: 8px; margin-right: 28px; font-size: 1rem; cursor: pointer; }
+    .q-choice input { transform: scale(1.2); }
+    #music-years-wrap > label.q-sub { margin-top: 18px; }
+    .q-years { display: flex; align-items: center; gap: 10px; }
+    .q-years input { width: 90px; padding: 8px 10px; font-size: 1rem; border: 1px solid #cbd2da; border-radius: 8px; }
+    .q-hint { font-size: .88rem; color: #6b7280; margin-top: 6px; }
+    #q-error { color: #b91c1c; font-weight: 700; min-height: 1.3em; margin-top: 12px; }
+
     /* ── Consent ─────────────────────────────────────────────── */
     #consent-screen {
       align-items: center; justify-content: center;
@@ -484,12 +501,35 @@
       <div id="confirm-question">Please play all four sounds above before submitting.</div>
       <div id="confirm-buttons">
         <button class="btn-secondary" id="goback-btn">&#8592; Go back and change</button>
-        <button class="btn-primary"   id="confirm-submit-btn" disabled>Yes, submit</button>
+        <button class="btn-primary"   id="confirm-submit-btn" disabled>Yes, continue</button>
       </div>
     </div>
   </div>
 
   <!-- END -->
+  <!-- QUESTIONNAIRE -->
+  <div id="questionnaire-screen" class="screen">
+    <h1>Your musical experience</h1>
+    <div class="instructions-box">
+      <fieldset class="q-item">
+        <legend>Have you ever regularly played a musical instrument or sung — whether through lessons, by teaching yourself, or by playing with others (for example in a band or choir)?</legend>
+        <label class="q-choice"><input type="radio" name="music-training" value="yes"> Yes</label>
+        <label class="q-choice"><input type="radio" name="music-training" value="no"> No</label>
+      </fieldset>
+      <div class="q-item" id="music-years-wrap" hidden>
+        <label for="music-years">For about how many years in total have you played or sung regularly?</label>
+        <div class="q-years"><input type="number" id="music-years" min="1" max="80" step="1" inputmode="numeric"> years</div>
+        <p class="q-hint">Count all the years together, even if there were breaks. If less than one year, enter 1.</p>
+        <label for="music-formal-years" class="q-sub">For how many of those years did you have lessons or formal instruction — for example with a teacher or at a music school?</label>
+        <div class="q-years"><input type="number" id="music-formal-years" min="0" max="80" step="1" inputmode="numeric"> years</div>
+        <p class="q-hint">Enter 0 if you never had lessons.</p>
+      </div>
+      <p class="q-hint">There are no right or wrong answers, and your answers do not affect your participation or payment.</p>
+    </div>
+    <button class="btn-primary" id="q-submit-btn" disabled>Submit</button>
+    <p id="q-error"></p>
+  </div>
+
   <div id="end-screen" class="screen">
     <h1>Thank you!</h1>
     <p>Your response has been recorded.</p>
@@ -843,18 +883,57 @@
     });
 
     // ── Submit ─────────────────────────────────────────────────────────────────
-    document.getElementById('confirm-submit-btn').addEventListener('click', async () => {
+
+    // ── Closing questionnaire: musical experience ────────────────────────────
+    // Asked after the task, not before, so it cannot shape how the task is done.
+    // Counts regular playing or singing of any kind, formal or self-taught (after
+    // the Gold-MSI practice item, Müllensiefen et al., 2014); the formal-years
+    // follow-up lets the six-year rule (Zhang et al., 2020) be applied as defined.
+    function musicAnswer() {
+      const r = document.querySelector('input[name="music-training"]:checked');
+      if (!r) return null;
+      if (r.value === 'no') return { musical_training: false,
+                                     musical_training_years: null, musical_training_formal_years: null };
+      const y = Number(document.getElementById('music-years').value);
+      if (!Number.isInteger(y) || y < 1 || y > 80) return null;
+      const fRaw = document.getElementById('music-formal-years').value;
+      const f = Number(fRaw);
+      if (fRaw === '' || !Number.isInteger(f) || f < 0 || f > y) return null;   // formal years are part of the total
+      return { musical_training: true, musical_training_years: y, musical_training_formal_years: f };
+    }
+    function updateQuestionnaire() {
+      const r = document.querySelector('input[name="music-training"]:checked');
+      document.getElementById('music-years-wrap').hidden = !(r && r.value === 'yes');
+      document.getElementById('q-submit-btn').disabled = !musicAnswer();
+    }
+    document.querySelectorAll('input[name="music-training"]')
+      .forEach(el => el.addEventListener('change', updateQuestionnaire));
+    document.getElementById('music-years').addEventListener('input', updateQuestionnaire);
+    document.getElementById('music-formal-years').addEventListener('input', updateQuestionnaire);
+
+    // Confirming the pairs ends the task; the questionnaire time is not task time.
+    let taskEndTime = null;
+    document.getElementById('confirm-submit-btn').addEventListener('click', () => {
       if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
-      const btn = document.getElementById('confirm-submit-btn');
+      taskEndTime = Date.now();
+      showScreen('questionnaire-screen');
+    });
+
+    document.getElementById('q-submit-btn').addEventListener('click', async () => {
+      const answer = musicAnswer();
+      if (!answer) return;
+      const btn = document.getElementById('q-submit-btn');
       btn.disabled = true; btn.textContent = 'Saving...';
+      document.getElementById('q-error').textContent = '';
 
       const fmtImg = id => id.replace(/^img/, '');
       const fmtSnd = id => id.replace(/^sound/, '') + '_sound';
 
       const payload = {
         prolific_pid: prolificPid, study_id: prolificStudy, session_id: prolificSession,
-        response_time_ms: Date.now() - startTime,
-        px_per_mm: Math.round(pxPerMm * 100) / 100
+        response_time_ms: (taskEndTime || Date.now()) - startTime,
+        px_per_mm: Math.round(pxPerMm * 100) / 100,
+        ...answer
       };
       GROUPS.forEach(g => {
         const img = Object.keys(locations).find(id => locations[id] === g && id.startsWith('img'));
@@ -868,7 +947,9 @@
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        if (!data.success || !data.completion_url) throw new Error(data.error || 'save failed');
         showScreen('end-screen');
         let secs = 5;
         const msg = document.getElementById('redirect-msg');
@@ -877,9 +958,11 @@
           msg.textContent = `You will be redirected to Prolific in ${secs} second${secs !== 1 ? 's' : ''}...`;
           if (secs <= 0) { clearInterval(tick); window.location.href = data.completion_url; }
         }, 1000);
-      } catch {
-        btn.disabled = false; btn.textContent = 'Yes, submit';
-        document.getElementById('notification').className = 'error';
+      } catch (err) {
+        console.error('submit failed:', err);
+        btn.disabled = false; btn.textContent = 'Try again';
+        document.getElementById('q-error').textContent =
+          'We could not save your responses. Please check your connection and press Try again.';
       }
     });
   </script>

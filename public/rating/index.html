@@ -88,6 +88,18 @@
     #submit-status.error { color: #b91c1c; }
     #submit-status.info  { color: #6b7280; }
     #retry-btn { margin-top: 12px; }
+    #questionnaire-screen .box { max-width: 640px; }
+    /* ── Closing questionnaire ── */
+    .q-item { border: none; margin: 0 0 20px; padding: 0; }
+    .q-item legend, #music-years-wrap > label { display: block; font-weight: 600; color: #1f2937; margin-bottom: 10px; line-height: 1.5; }
+    .q-choice { display: inline-flex; align-items: center; gap: 8px; margin-right: 28px; font-size: 1rem; cursor: pointer; }
+    .q-choice input { transform: scale(1.2); }
+    #music-years-wrap > label.q-sub { margin-top: 18px; }
+    .q-years { display: flex; align-items: center; gap: 10px; }
+    .q-years input { width: 90px; padding: 8px 10px; font-size: 1rem; border: 1px solid #cbd2da; border-radius: 8px; }
+    .q-hint { font-size: .88rem; color: #6b7280; margin-top: 6px; }
+    #q-error { color: #b91c1c; font-weight: 700; min-height: 1.3em; margin-top: 12px; }
+
     /* blocking overlay whenever the window is too small for the stimuli */
     #size-gate { display: none; position: fixed; inset: 0; background: #fff; z-index: 999;
                  align-items: center; justify-content: center; text-align: center; padding: 24px; }
@@ -185,8 +197,6 @@
     <div class="comp-list" id="comp-list"></div>
     <div id="trial-gate"></div>
     <button class="btn-primary" id="next-btn" disabled>Next &rarr;</button>
-    <p id="submit-status"></p>
-    <button class="btn-primary" id="retry-btn" style="display:none">Try again</button>
   </div>
 
   <!-- ═══ RESUME (after an interrupted session) ═══ -->
@@ -194,6 +204,30 @@
     <h1>Welcome back</h1>
     <div class="box"><p id="resume-text"></p></div>
     <button class="btn-primary" id="resume-btn">Continue</button>
+  </div>
+
+  <!-- ═══ CLOSING QUESTIONNAIRE ═══ -->
+  <div id="questionnaire-screen" class="screen">
+    <h1>Your musical experience</h1>
+    <div class="box">
+      <fieldset class="q-item">
+        <legend>Have you ever regularly played a musical instrument or sung — whether through lessons, by teaching yourself, or by playing with others (for example in a band or choir)?</legend>
+        <label class="q-choice"><input type="radio" name="music-training" value="yes"> Yes</label>
+        <label class="q-choice"><input type="radio" name="music-training" value="no"> No</label>
+      </fieldset>
+      <div class="q-item" id="music-years-wrap" hidden>
+        <label for="music-years">For about how many years in total have you played or sung regularly?</label>
+        <div class="q-years"><input type="number" id="music-years" min="1" max="80" step="1" inputmode="numeric"> years</div>
+        <p class="q-hint">Count all the years together, even if there were breaks. If less than one year, enter 1.</p>
+        <label for="music-formal-years" class="q-sub">For how many of those years did you have lessons or formal instruction — for example with a teacher or at a music school?</label>
+        <div class="q-years"><input type="number" id="music-formal-years" min="0" max="80" step="1" inputmode="numeric"> years</div>
+        <p class="q-hint">Enter 0 if you never had lessons.</p>
+      </div>
+      <p class="q-hint">There are no right or wrong answers, and your answers do not affect your participation or payment.</p>
+    </div>
+    <button class="btn-primary" id="q-submit-btn" disabled>Submit</button>
+    <p id="submit-status"></p>
+    <button class="btn-primary" id="retry-btn" style="display:none">Try again</button>
   </div>
 
   <!-- ═══ THANK YOU ═══ -->
@@ -366,7 +400,8 @@ function loadCheckpoint() {
 // Warn before leaving mid-task (browsers show their own generic wording).
 window.addEventListener('beforeunload', e => {
   const inTask = document.getElementById('trial-screen').classList.contains('active');
-  if (inTask && allRatings.length < 32) { e.preventDefault(); e.returnValue = ''; }
+  const atQuestion = document.getElementById('questionnaire-screen').classList.contains('active');
+  if ((inTask && allRatings.length < 32) || atQuestion) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // ── Consent ──────────────────────────────────────────────────────────────────
@@ -597,7 +632,7 @@ document.getElementById('next-btn').addEventListener('click', () => {
   }));
   trialIndex++;
   saveCheckpoint();
-  if (trialIndex === TRIALS.length) submitAll();
+  if (trialIndex === TRIALS.length) showScreen('questionnaire-screen');   // then submit
   else if (trialIndex === 4) showBlockIntro();      // second block starts here
   else renderTrial();
 });
@@ -617,8 +652,12 @@ async function submitAll() {
   status.className = 'info';
   status.textContent = 'Saving your responses…';
 
+  const answer = musicAnswer() || { musical_training: null,
+                                  musical_training_years: null, musical_training_formal_years: null };
+  document.getElementById('q-submit-btn').style.display = 'none';
   const payload = { prolific_pid: prolificPid, study_id: prolificStudy,
-                    session_id: prolificSession, ratings: allRatings };
+                    session_id: prolificSession,
+                    ratings: allRatings.map(r => ({ ...r, ...answer })) };
 
   for (let i = 0; i < RETRY_DELAYS_MS.length; i++) {
     if (RETRY_DELAYS_MS[i]) {
@@ -664,6 +703,39 @@ function finish(data) {
   }
 }
 
+
+// ── Closing questionnaire: musical experience ────────────────────────────
+// Asked after the task, not before, so it cannot shape how the task is done.
+// Counts regular playing or singing of any kind, formal or self-taught (after
+// the Gold-MSI practice item, Müllensiefen et al., 2014); the formal-years
+// follow-up lets the six-year rule (Zhang et al., 2020) be applied as defined.
+function musicAnswer() {
+  const r = document.querySelector('input[name="music-training"]:checked');
+  if (!r) return null;
+  if (r.value === 'no') return { musical_training: false,
+                                 musical_training_years: null, musical_training_formal_years: null };
+  const y = Number(document.getElementById('music-years').value);
+  if (!Number.isInteger(y) || y < 1 || y > 80) return null;
+  const fRaw = document.getElementById('music-formal-years').value;
+  const f = Number(fRaw);
+  if (fRaw === '' || !Number.isInteger(f) || f < 0 || f > y) return null;   // formal years are part of the total
+  return { musical_training: true, musical_training_years: y, musical_training_formal_years: f };
+}
+function updateQuestionnaire() {
+  const r = document.querySelector('input[name="music-training"]:checked');
+  document.getElementById('music-years-wrap').hidden = !(r && r.value === 'yes');
+  document.getElementById('q-submit-btn').disabled = !musicAnswer();
+}
+document.querySelectorAll('input[name="music-training"]')
+  .forEach(el => el.addEventListener('change', updateQuestionnaire));
+document.getElementById('music-years').addEventListener('input', updateQuestionnaire);
+document.getElementById('music-formal-years').addEventListener('input', updateQuestionnaire);
+
+document.getElementById('q-submit-btn').addEventListener('click', () => {
+  if (!musicAnswer()) return;
+  submitAll();
+});
+
 document.getElementById('retry-btn').addEventListener('click', () => {
   document.getElementById('retry-btn').disabled = true;
   submitAll();
@@ -681,11 +753,11 @@ document.getElementById('retry-btn').addEventListener('click', () => {
   const complete = trialIndex === 8 && allRatings.length === 32;
   document.getElementById('resume-text').innerHTML = complete
     ? 'You finished all 8 rounds, but your answers could not be sent last time. '
-      + 'They were kept safely — press Continue to send them now.'
+      + 'They were kept safely — press Continue to finish.'
     : `You already completed <strong>${trialIndex} of 8</strong> rounds. `
       + 'Your answers were kept — you can carry on where you stopped.';
   document.getElementById('resume-btn').addEventListener('click', () => {
-    if (complete) { showScreen('trial-screen'); submitAll(); }
+    if (complete) showScreen('questionnaire-screen');
     else if (trialIndex === 4) showBlockIntro();
     else { renderTrial(); showScreen('trial-screen'); }
   });

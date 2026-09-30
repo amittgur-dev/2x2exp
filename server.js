@@ -20,6 +20,15 @@ const TABLE_2X2    = 'results';
 const TABLE_4X4    = 'results_4x4_v2';
 const TABLE_RATING = 'ratings_v2';
 
+// Closing questionnaire: accept only a boolean and a whole number of years,
+// otherwise store null rather than rejecting (and losing) the whole session.
+function cleanMusic(training, years, formal) {
+  const t = typeof training === 'boolean' ? training : null;
+  const y = t === true && Number.isInteger(years) && years >= 1 && years <= 80 ? years : null;
+  const f = y !== null && Number.isInteger(formal) && formal >= 0 && formal <= y ? formal : null;
+  return { musical_training: t, musical_training_years: y, musical_training_formal_years: f };
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
@@ -67,7 +76,8 @@ app.post('/submit-4x4', async (req, res) => {
     prolific_pid, study_id, session_id,
     g1_image, g1_sound, g2_image, g2_sound,
     g3_image, g3_sound, g4_image, g4_sound,
-    response_time_ms, px_per_mm
+    response_time_ms, px_per_mm,
+    musical_training, musical_training_years, musical_training_formal_years
   } = req.body;
 
   const groups = [
@@ -90,7 +100,8 @@ app.post('/submit-4x4', async (req, res) => {
     g3_image, g3_sound, g4_image, g4_sound,
     matched_pairs,
     response_time_ms,
-    px_per_mm
+    px_per_mm,
+    ...cleanMusic(musical_training, musical_training_years, musical_training_formal_years)
   };
 
   const { error } = await supabase.from(TABLE_4X4).insert(row);
@@ -146,6 +157,7 @@ app.post('/submit-ratings', async (req, res) => {
   const rows = ratings.map(r => {
     const row = { timestamp };
     RATING_COLUMNS.forEach(k => { row[k] = r[k] === undefined ? null : r[k]; });
+    Object.assign(row, cleanMusic(r.musical_training, r.musical_training_years, r.musical_training_formal_years));
     return row;
   });
 
