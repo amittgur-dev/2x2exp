@@ -676,7 +676,9 @@
     const EDGE_PX       = 80;    // auto-scroll band at the top and bottom of the window
     const EDGE_DELAY_MS = 100;   // time in the band before auto-scroll starts
     const MAX_SCROLL_PX = 18;    // scroll per frame at the very edge
+    const HINT_SCROLL_PX = 70;   // one-off nudge on the first drag, showing that the page scrolls
     let suppressClick = false;   // swallows the click the browser fires when a drag ends
+    let scrollHinted  = false;
 
     document.querySelectorAll('#task-screen .item').forEach(el => {
       el.addEventListener('pointerdown', e => {
@@ -730,6 +732,23 @@
       moveDrag(x, y);
       drag.raf = requestAnimationFrame(autoScroll);
       updateScrollCue();
+      hintScroll();
+    }
+
+    // The first time anything is dragged, glide the page down a little, so that
+    // participants see there is more below (only if there is more below).
+    function hintScroll() {
+      const room = document.documentElement.scrollHeight - window.innerHeight - window.scrollY;
+      if (scrollHinted || room < 40) return;
+      scrollHinted = true;
+      const dist = Math.min(HINT_SCROLL_PX, room);
+      let t0 = null, done = 0;
+      requestAnimationFrame(function step(now) {
+        if (t0 === null) t0 = now;
+        const p = Math.min(1, (now - t0) / 450), to = Math.round(dist * (1 - Math.pow(1 - p, 3)));
+        window.scrollBy(0, to - done); done = to;
+        if (p < 1) requestAnimationFrame(step);
+      });
     }
 
     function moveDrag(x, y) {
