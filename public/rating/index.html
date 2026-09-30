@@ -39,16 +39,16 @@
     #calib-hint { font-size: .85rem; color: #9ca3af; display: block; margin: 8px 0 18px; }
 
     /* rating trial */
-    #ref-panel { margin-bottom: 8px; }
+    #ref-panel { margin-bottom: 4px; }
     #ref-image { display: block; margin: 0 auto; }
     .play-btn { background: #fff; border: 2px solid #2563eb; color: #2563eb; border-radius: 8px;
                 padding: 8px 18px; font-size: .95rem; cursor: pointer; }
     .play-btn.big { font-size: 1.05rem; padding: 12px 26px; }
     .play-btn.played { border-color: #2e7d5e; color: #2e7d5e; }
     .play-btn.playing { background: #dc2626; border-color: #dc2626; color: #fff; cursor: default; }
-    .comp-list { display: flex; flex-direction: column; gap: 14px; max-width: 720px; margin: 18px auto; }
+    .comp-list { display: flex; flex-direction: column; gap: 8px; max-width: 720px; margin: 8px auto; }
     .comp-row { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
-                padding: 14px 18px; display: flex; align-items: center; gap: 18px; }
+                padding: 8px 18px; display: flex; align-items: center; gap: 18px; }
     .comp-row .stim-cell { flex: 0 0 auto; width: 130px; display: flex; justify-content: center; }
     .comp-row img { display: block; }
     .slider-cell { flex: 1; text-align: left; }
@@ -71,8 +71,8 @@
     .anchors { display: flex; justify-content: space-between; font-size: .78rem; color: #6b7280; }
     .rating-val { font-weight: 700; color: #2563eb; min-width: 2.5em; display: inline-block; }
     .rating-val.unset { color: #9ca3af; font-weight: 400; }
-    #trial-progress { color: #6b7280; font-size: .9rem; margin-bottom: 10px; }
-    #trial-gate { font-size: 1.05rem; font-weight: 700; color: #6b7280; margin: 12px 0 16px; min-height: 1.4em; }
+    #trial-progress { color: #6b7280; font-size: .9rem; margin-bottom: 4px; }
+    #trial-gate { font-size: 1.05rem; font-weight: 700; color: #6b7280; margin: 8px 0 10px; min-height: 1.4em; }
     #trial-gate.ready { color: #15803d; }
     #trial-gate.listening { color: #b45309; }
     #start-hint { font-size: 1.05rem; font-weight: 700; color: #6b7280; margin-top: 10px; }
@@ -241,7 +241,10 @@
 const STIMULI    = ['RFSM', 'RFRM', 'SFSM', 'SFRM'];
 const CARD_W_MM  = 85.6, CARD_H_MM = 54.0;
 const IMAGE_MM   = 60;                  // same physical size as the 4×4 task,
-                                        // and identical as reference and as comparison
+                                        // and identical as reference and as comparison.
+                                        // IMAGE_MM is the WIDTH of the (cropped) image box.
+const IMG_ASPECT = 0.8375;   // height/width of the common crop shared by all four images
+const MIN_GAP_MM = 10;       // minimum edge-to-edge distance between neighbouring images
 const NEUTRAL_START = 50;               // every slider starts at the neutral midpoint
 const SUBMIT_URL = '/submit-ratings';
 
@@ -317,12 +320,16 @@ const showScreen = id => { document.querySelectorAll('.screen').forEach(s => s.c
 // Asking politely is not enough: on the stimulus screens a window that is too
 // small forces scrolling, so the four items can no longer be compared at a
 // glance. Block progress until there is room, and re-check on every resize.
-const MIN_H = 640, GRID_GAP = 12, CELL_PAD = 30, BODY_PAD = 40;
+const MIN_H = 640, CELL_PAD = 30, BODY_PAD = 40;
+// Neighbouring comparison images are separated by both cells' padding plus the
+// grid gap, so size the gap to keep the image-to-image distance >= MIN_GAP_MM.
+function gridGapPx() { return Math.max(8, Math.ceil(MIN_GAP_MM * pxPerMm) - CELL_PAD); }   // ceil: never below the minimum
+function famGapPx()  { return Math.ceil(MIN_GAP_MM * pxPerMm); }
 
 function stimulusImgPx()  { return Math.round(IMAGE_MM * pxPerMm); }
 function stimulusCellPx() { return Math.max(stimulusImgPx(), 200) + CELL_PAD; }
 function widthNeededFor(cols) {
-  return cols * stimulusCellPx() + (cols - 1) * GRID_GAP + BODY_PAD;
+  return cols * stimulusCellPx() + (cols - 1) * gridGapPx() + BODY_PAD;
 }
 
 // Four across is preferred: it is symmetric, shorter, and lets all four be
@@ -338,9 +345,11 @@ function applyStimulusColumns() {
   const list = document.getElementById('comp-list');
   if (list && list.classList.contains('grid')) {
     list.style.gridTemplateColumns = `repeat(${cols}, ${stimulusCellPx()}px)`;
+    list.style.gap = gridGapPx() + 'px';
   }
   const fam = document.getElementById('fam-images');
-  if (fam) fam.style.gridTemplateColumns = `repeat(${cols}, ${stimulusImgPx()}px)`;
+  if (fam) { fam.style.gridTemplateColumns = `repeat(${cols}, ${stimulusImgPx()}px)`;
+             fam.style.gap = famGapPx() + 'px'; }
 }
 
 function checkViewport() {
@@ -493,7 +502,7 @@ document.getElementById('block-btn').addEventListener('click', () => {
 // ── Trial rendering ──────────────────────────────────────────────────────────
 function imgTag(stim, mm) {
   const px = Math.round(mm * pxPerMm);
-  return `<img src="${stim}.png" width="${px}" height="${px}" alt="">`;
+  return `<img src="${stim}.png" width="${px}" height="${Math.round(px * IMG_ASPECT)}" alt="">`;
 }
 
 let trialState = null;

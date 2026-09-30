@@ -547,7 +547,10 @@
     const GROUPS     = ['g1', 'g2', 'g3', 'g4'];
     const CARD_W_MM  = 85.6, CARD_H_MM = 54.0;
     const IMAGE_MM   = 60; // identical to the rating task: an image is the same
-                           // physical size wherever it appears, in either study
+                           // physical size wherever it appears, in either study.
+                           // IMAGE_MM is the WIDTH of the (cropped) image box.
+    const IMG_ASPECT = 0.8375;   // height/width of the common crop shared by all four images
+    const MIN_GAP_MM = 10;       // minimum edge-to-edge distance between neighbouring images
 
     let pxPerMm = 96 / 25.4;
 
@@ -579,9 +582,12 @@
     function applyImageSize() {
       const px = Math.round(IMAGE_MM * pxPerMm);
       document.querySelectorAll('.image-item img').forEach(img => {
-        img.style.width = px + 'px'; img.style.height = px + 'px';
+        img.style.width = px + 'px'; img.style.height = Math.round(px * IMG_ASPECT) + 'px';
       });
+      // calibrated minimum distance between neighbouring images in the stimulus row
+      document.getElementById('stimulus-images').style.gap = minGapPx() + 'px';
     }
+    function minGapPx() { return Math.ceil(MIN_GAP_MM * pxPerMm); }   // ceil: never below the minimum
 
     // ── State ──────────────────────────────────────────────────────────────────
     // Each entry: 'stimulus' | 'g1' | 'g2' | 'g3' | 'g4'
@@ -608,7 +614,7 @@
     const MIN_H_4X4 = 620;
     function requiredWidth4x4() {
       const imgPx = Math.round(IMAGE_MM * pxPerMm);
-      return 4 * imgPx + 3 * 14 + 80;        // four images + gaps + padding
+      return 4 * imgPx + 3 * minGapPx() + 48 + 16;   // images + calibrated gaps + bar padding + margin
     }
     function checkViewport() {
       const onTask = document.getElementById('task-screen').classList.contains('active')
@@ -846,7 +852,7 @@
       const img = document.createElement('img');
       img.src = imgId.replace('img', '') + '.png';
       img.style.width  = sizePx + 'px';
-      img.style.height = sizePx + 'px';
+      img.style.height = Math.round(sizePx * IMG_ASPECT) + 'px';
       img.style.objectFit = 'contain';
       container.appendChild(img);
 
