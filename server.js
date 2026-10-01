@@ -44,17 +44,20 @@ const supabase = createClient(
 
 // Insert; if the table lacks one of the newest columns (added in Supabase after
 // the code), save the session without those columns instead of losing it.
+// savedWithout lists any columns dropped that way; the endpoints echo it in
+// their reply (participants never see it), so a test save shows at once
+// whether the table is complete.
 const MISSING_COLUMN = ['PGRST204', '42703'];
 async function insertRows(table, rows, newColumns) {
   let { error } = await supabase.from(table).insert(rows);
-  if (error && MISSING_COLUMN.includes(error.code)) {
-    console.error(`WARNING: ${table} is missing a column (${error.message}). `
-      + `Saving without: ${newColumns.join(', ')} — add them in Supabase.`);
-    const strip = r => { const c = { ...r }; newColumns.forEach(k => delete c[k]); return c; };
-    ({ error } = await supabase.from(table).insert(Array.isArray(rows) ? rows.map(strip) : strip(rows)));
-  }
-  return error;
+  if (!error || !MISSING_COLUMN.includes(error.code)) return { error, savedWithout: [] };
+  console.error(`WARNING: ${table} is missing a column (${error.message}). `
+    + `Saving without: ${newColumns.join(', ')} — add them in Supabase.`);
+  const strip = r => { const c = { ...r }; newColumns.forEach(k => delete c[k]); return c; };
+  ({ error } = await supabase.from(table).insert(Array.isArray(rows) ? rows.map(strip) : strip(rows)));
+  return { error, savedWithout: error ? [] : newColumns };
 }
+const savedNote = cols => cols.length ? { saved_without: cols } : {};
 
 function checkCongruency(leftImage, leftSound, rightImage, rightSound) {
   // Congruent if either side has a matching same-name pair (e.g. RFRM + RFRM_sound, or SFSM + SFSM_sound).
@@ -132,14 +135,14 @@ app.post('/submit-4x4', async (req, res) => {
   COLUMNS_4X4_PLAYS.forEach(k => { row[k] = nonNegInt(req.body[k], MAX_PLAYS); });
   row.matching_time_ms = nonNegInt(req.body.matching_time_ms, MAX_MS);
 
-  const error = await insertRows(TABLE_4X4, row, [...COLUMNS_4X4_PLAYS, 'matching_time_ms']);
+  const { error, savedWithout } = await insertRows(TABLE_4X4, row, [...COLUMNS_4X4_PLAYS, 'matching_time_ms']);
 
   if (error) {
     console.error('Supabase error (4x4):', error);
     return res.status(500).json({ success: false, error: 'Failed to save data' });
   }
 
-  res.json({ success: true, completion_url: PROLIFIC_COMPLETION_URL_4X4 });
+  res.json({ success: true, completion_url: PROLIFIC_COMPLETION_URL_4X4, ...savedNote(savedWithout) });
 });
 
 // ── Rating study (/rating/) ──────────────────────────────────────────────────
@@ -193,7 +196,7 @@ app.post('/submit-ratings', async (req, res) => {
     return row;
   });
 
-  const error = await insertRows(TABLE_RATING, rows, RATING_FAM_COLUMNS);
+  const { error, savedWithout } = await insertRows(TABLE_RATING, rows, RATING_FAM_COLUMNS);
 
   if (error) {
     console.error('Supabase error (ratings):', error);
@@ -208,7 +211,8 @@ app.post('/submit-ratings', async (req, res) => {
   res.json({
     success: true,
     completion_url: PROLIFIC_COMPLETION_URL_RATING,
-    completion_code: ratingCompletionCode
+    completion_code: ratingCompletionCode,
+    ...savedNote(savedWithout)
   });
 });
 
