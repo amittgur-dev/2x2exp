@@ -390,7 +390,7 @@ function saveCheckpoint() {
   try {
     localStorage.setItem(CKPT_KEY, JSON.stringify({
       pid: prolificPid, trialIndex, allRatings,
-      blockOrder: BLOCK_ORDER, trials: TRIALS, pxPerMm
+      blockOrder: BLOCK_ORDER, trials: TRIALS, pxPerMm, famRecord
     }));
   } catch (e) { /* private mode / quota — non-fatal, carry on */ }
 }
@@ -425,7 +425,11 @@ document.getElementById('instructions-btn').addEventListener('click', () => {
   if (el.requestFullscreen) { try { el.requestFullscreen().catch(() => {}); } catch (e) {} }
   showScreen('calibration-screen');
 });
-document.getElementById('start-btn').addEventListener('click', () => showBlockIntro());
+document.getElementById('start-btn').addEventListener('click', () => {
+  famRecord = { fam_time_ms: Date.now() - famT0 };
+  STIMULI.forEach(s => { famRecord['fam_plays_' + s.toLowerCase()] = famPlays[s]; });
+  showBlockIntro();
+});
 
 // ── Calibration (identical mechanism to the 4×4 task) ────────────────────────
 const calibCard = document.getElementById('calibration-card');
@@ -438,6 +442,7 @@ document.getElementById('calib-confirm-btn').addEventListener('click', () => {
   pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
   renderFamiliarization();          // built after calibration, so previews are true size
   showScreen('familiarize-screen');
+  famT0 = Date.now();
 });
 
 // ── Instructions + sound test ────────────────────────────────────────────────
@@ -446,6 +451,10 @@ document.getElementById('calib-confirm-btn').addEventListener('click', () => {
 // and late rounds are rated on the same scale, and it equalises exposure across the
 // four sounds (a single test sound would over-expose whichever one was chosen).
 const famPlayed = new Set();
+// Recorded for the familiarization step: completed plays of each sound and the
+// time spent on it. Added to every row the participant submits.
+const famPlays = Object.fromEntries(STIMULI.map(s => [s, 0]));
+let famT0 = null, famRecord = null;
 
 function renderFamiliarization() {
   const sounds = document.getElementById('fam-sounds');
@@ -456,6 +465,7 @@ function renderFamiliarization() {
     b.innerHTML = '&#9654; Play';
     b.addEventListener('click', () => playGated(audioCache[s], b, () => {
       famPlayed.add(s);
+      famPlays[s]++;
       updateFamGate();
     }));
     sounds.appendChild(b);
@@ -637,7 +647,8 @@ document.getElementById('next-btn').addEventListener('click', () => {
     ref_plays: t.direction === 'A_ref' ? trialState.refPlays : null,
     comp_plays: t.direction === 'V_ref' ? trialState.compPlays[c] : null,
     trial_rt_ms: Date.now() - trialState.t0,
-    px_per_mm: Math.round(pxPerMm * 100) / 100
+    px_per_mm: Math.round(pxPerMm * 100) / 100,
+    ...famRecord
   }));
   trialIndex++;
   saveCheckpoint();
@@ -756,6 +767,7 @@ document.getElementById('retry-btn').addEventListener('click', () => {
   if (!c) return;
   TRIALS = c.trials; trialIndex = c.trialIndex; BLOCK_ORDER = c.blockOrder;
   pxPerMm = c.pxPerMm || pxPerMm;
+  famRecord = c.famRecord || null;    // familiarization is not repeated on resume
   allRatings.push(...c.allRatings);
   // Finished all 8 rounds but the save never succeeded — the most valuable case to
   // recover: go straight back to submitting rather than asking for any more work.

@@ -587,6 +587,7 @@
       pxPerMm = parseInt(calibCard.style.width) / CARD_W_MM;
       applyImageSize();
       startTime = Date.now();          // calibration is now the last step before the task
+      matchingSince = startTime;
       showScreen('task-screen');
     });
 
@@ -998,6 +999,12 @@
     let currentAudio = null;
     const taskSoundsPlayed    = new Set();
     const confirmSoundsPlayed = new Set();
+    // Completed plays of each sound (counted when it finishes, like "heard"),
+    // separately for the matching screen and the confirmation screen.
+    const taskPlays    = Object.fromEntries(STIMULI.map(s => [s, 0]));
+    const confirmPlays = Object.fromEntries(STIMULI.map(s => [s, 0]));
+    // Time on the matching screen, summed over visits (going back adds a visit).
+    let matchingMs = 0, matchingSince = null;
 
     document.querySelectorAll('.play-btn').forEach(btn => {
       btn.addEventListener('click', e => {
@@ -1012,6 +1019,7 @@
           btn.classList.remove('playing'); btn.innerHTML = '&#9654; Play';
           currentAudio = null;
           taskSoundsPlayed.add(btn.dataset.audio);
+          taskPlays[btn.dataset.audio.replace(/^sound/, '')]++;
           updateUI();
         };
       });
@@ -1019,6 +1027,7 @@
 
     // ── Confirmation screen ────────────────────────────────────────────────────
     document.getElementById('submit-btn').addEventListener('click', () => {
+      matchingMs += Date.now() - matchingSince;
       confirmSoundsPlayed.clear();
       updateConfirmBtn();
 
@@ -1080,6 +1089,7 @@
           playBtn.classList.remove('playing'); playBtn.innerHTML = '&#9654; Play';
           currentAudio = null;
           confirmSoundsPlayed.add(sndId);
+          confirmPlays[sndId.replace(/^sound/, '')]++;
           updateConfirmBtn();
         };
       });
@@ -1089,6 +1099,7 @@
     document.getElementById('goback-btn').addEventListener('click', () => {
       if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
       document.querySelectorAll('.play-btn.playing').forEach(b => { b.classList.remove('playing'); b.innerHTML = '&#9654; Play'; });
+      matchingSince = Date.now();
       showScreen('task-screen');
     });
 
@@ -1143,8 +1154,13 @@
         prolific_pid: prolificPid, study_id: prolificStudy, session_id: prolificSession,
         response_time_ms: (taskEndTime || Date.now()) - startTime,
         px_per_mm: Math.round(pxPerMm * 100) / 100,
+        matching_time_ms: matchingMs,
         ...answer
       };
+      STIMULI.forEach(s => {
+        payload['plays_' + s.toLowerCase()]         = taskPlays[s];
+        payload['confirm_plays_' + s.toLowerCase()] = confirmPlays[s];
+      });
       GROUPS.forEach(g => {
         const img = Object.keys(locations).find(id => locations[id] === g && id.startsWith('img'));
         const snd = Object.keys(locations).find(id => locations[id] === g && id.startsWith('sound'));
