@@ -17,8 +17,8 @@ const PROLIFIC_COMPLETION_URL_4X4 = 'https://app.prolific.com/submissions/comple
 // Change these to start a clean collection; the old table keeps its history.
 // A new table must have RLS disabled or every insert is rejected (see notes).
 const TABLE_2X2    = 'results';
-const TABLE_4X4    = 'results_4x4_v2';
-const TABLE_RATING = 'ratings_v2';
+const TABLE_4X4    = 'results_4x4_v3';
+const TABLE_RATING = 'ratings_v3';
 
 // Closing questionnaire: accept only a boolean and a whole number of years,
 // otherwise store null rather than rejecting (and losing) the whole session.
