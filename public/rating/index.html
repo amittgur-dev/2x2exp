@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Similarity Rating Task</title>
+  <title>Rating Task</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -161,10 +161,10 @@
 
   <!-- ═══ INSTRUCTIONS ═══ -->
   <div id="start-screen" class="screen">
-    <h1>Similarity Rating Task</h1>
+    <h1>Rating Task</h1>
     <div class="box">
       <p>Each round shows a <strong>reference</strong> — an image or a sound — with four items of the other kind.</p>
-      <p><strong>Rate how similar each item is to the reference</strong> by moving its slider.</p>
+      <p><strong>Rate how well each item matches the reference</strong> by moving its slider.</p>
       <p>There are no right or wrong answers; we want your impression. Each sound must finish playing before its slider unlocks — replay as often as you like.</p>
       <p>The items appear in a <strong>random order</strong> in every round, so their positions carry no meaning.</p>
       <p><strong>Please maximise your browser window</strong> before continuing, so that all four
@@ -603,10 +603,10 @@ function showBlockIntro() {
   document.getElementById('block-title').textContent = `Part ${trialIndex === 0 ? 1 : 2} of 2`;
   document.getElementById('block-text').innerHTML = t.direction === 'V_ref'
     ? 'In this part you will see an <strong>image</strong> and hear <strong>four sounds</strong>.<br>'
-      + 'Rate how similar each sound is to the image.<br><br>'
+      + 'Rate how well each sound matches the image.<br><br>'
       + '<span class="small">Each sound must finish playing before its slider unlocks.</span>'
     : 'In this part you will hear a <strong>sound</strong> and see <strong>four images</strong>.<br>'
-      + 'Rate how similar each image is to the sound.<br><br>'
+      + 'Rate how well each image matches the sound.<br><br>'
       + '<span class="small">The reference sound must finish playing before you can continue.</span>';
   showScreen('block-screen');
 }
@@ -636,11 +636,11 @@ function renderTrial() {
   const ref = document.getElementById('ref-panel');
   if (t.direction === 'V_ref') {
     ref.innerHTML = `<p class="small">Reference</p>${imgTag(t.reference, IMAGE_MM)}
-      <p class="small" style="margin-top:6px">How similar is each sound to this image?</p>`;
+      <p class="small" style="margin-top:6px">How well does each sound match this image?</p>`;
   } else {
     ref.innerHTML = `<p class="small">Reference</p>
       <button class="play-btn big" id="ref-play">&#9654; Play reference sound</button>
-      <p class="small" style="margin-top:6px">How similar is each image to this sound?</p>`;
+      <p class="small" style="margin-top:6px">How well does each image match this sound?</p>`;
     document.getElementById('ref-play').onclick = () => {
       const btn = document.getElementById('ref-play');
       playGated(audioCache[t.reference], btn, () => {
@@ -666,9 +666,9 @@ function renderTrial() {
     const sliderHTML = `
       <div class="slider-cell locked" id="cell-${c}">
         <input type="range" min="1" max="100" value="${init}" class="untouched" data-comp="${c}" disabled>
-        <div class="anchors"><span>least similar</span>
+        <div class="anchors"><span>worst match</span>
           <span class="rating-val unset" id="val-${c}">—</span>
-          <span>most similar</span></div>
+          <span>best match</span></div>
       </div>`;
     const el = document.createElement('div');
     if (isImageComparison) {
