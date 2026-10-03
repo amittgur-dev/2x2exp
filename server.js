@@ -37,6 +37,64 @@ const MAX_PLAYS = 10000;
 const MAX_MS    = 24 * 60 * 60 * 1000;
 const STIM_KEYS = ['rfrm', 'rfsm', 'sfsm', 'sfrm'];
 
+// ── Authenticity checks (4x4 and rating studies) ────────────────────────────
+// Nothing here blocks a participant; every result is stored as a flag to review.
+//  · ai_check: the closing question has one right answer ("correct") and one
+//    option that is named only in a line of the page that people cannot see but
+//    page-reading software can ("trap"). Any other choice is "other".
+//  · hidden_field_filled: a text box people cannot see or reach; true means
+//    software typed into it.
+//  · audio_check_*: three spoken digits, typed in. The answers are kept here,
+//    not in the page.
+//  · auto_webdriver / untrusted_events / pointer_* / drag_*: passive signals —
+//    the browser says it is automated; clicks or keys produced by script; how
+//    much the pointer moved; and (4x4) how many samples a drag had and how
+//    straight it was (1 = a perfect line, which a hand does not draw).
+// The page sends neutral field names; the evaluation happens here.
+const CHECK_CORRECT = 'sounds_images';
+const CHECK_TRAP    = 'stories';
+const SOUNDCHECK_ANSWERS = { '1': '274', '2': '618', '3': '386', '4': '741' };
+
+const CHECK_COLUMNS = [
+  'ai_check', 'hidden_field_filled',
+  'audio_check_clip', 'audio_check_answer', 'audio_check_correct', 'audio_check_plays',
+  'auto_webdriver', 'untrusted_events', 'pointer_moves', 'pointer_clicks'
+];
+const DRAG_COLUMNS = ['drag_count', 'drag_moves_median', 'drag_straightness_median'];
+
+function boundedNumber(v, max, decimals) {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > max) return null;
+  const f = 10 ** decimals;
+  return Math.round(v * f) / f;
+}
+
+function cleanChecks(b) {
+  const choice = typeof b.final_check === 'string' ? b.final_check : null;
+  const clip   = typeof b.soundcheck_clip === 'string'
+                 && Object.prototype.hasOwnProperty.call(SOUNDCHECK_ANSWERS, b.soundcheck_clip) ? b.soundcheck_clip : null;
+  const typed  = typeof b.soundcheck_answer === 'string' ? b.soundcheck_answer.replace(/\D/g, '').slice(0, 10) : null;
+  return {
+    ai_check: choice === null ? null
+            : choice === CHECK_CORRECT ? 'correct' : choice === CHECK_TRAP ? 'trap' : 'other',
+    hidden_field_filled: typeof b.extra_comments === 'string' ? b.extra_comments.trim() !== '' : null,
+    audio_check_clip:    clip,
+    audio_check_answer:  typed,
+    audio_check_correct: clip !== null && typed !== null ? typed === SOUNDCHECK_ANSWERS[clip] : null,
+    audio_check_plays:   nonNegInt(b.soundcheck_plays, MAX_PLAYS),
+    auto_webdriver:      typeof b.auto_webdriver === 'boolean' ? b.auto_webdriver : null,
+    untrusted_events:    nonNegInt(b.untrusted_events, 1e7),
+    pointer_moves:       nonNegInt(b.pointer_moves, 1e8),
+    pointer_clicks:      nonNegInt(b.pointer_clicks, 1e7)
+  };
+}
+function cleanDrags(b) {
+  return {
+    drag_count:               nonNegInt(b.drag_count, 1e5),
+    drag_moves_median:        boundedNumber(b.drag_moves_median, 1e6, 1),
+    drag_straightness_median: boundedNumber(b.drag_straightness_median, 1, 3)
+  };
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
@@ -134,8 +192,9 @@ app.post('/submit-4x4', async (req, res) => {
   // screen, plus the time spent on the matching screen (response_time_ms covers both)
   COLUMNS_4X4_PLAYS.forEach(k => { row[k] = nonNegInt(req.body[k], MAX_PLAYS); });
   row.matching_time_ms = nonNegInt(req.body.matching_time_ms, MAX_MS);
+  Object.assign(row, cleanChecks(req.body), cleanDrags(req.body));
 
-  const { error, savedWithout } = await insertRows(TABLE_4X4, row, [...COLUMNS_4X4_PLAYS, 'matching_time_ms']);
+  const { error, savedWithout } = await insertRows(TABLE_4X4, row, [...CHECK_COLUMNS, ...DRAG_COLUMNS]);
 
   if (error) {
     console.error('Supabase error (4x4):', error);
@@ -193,10 +252,11 @@ app.post('/submit-ratings', async (req, res) => {
     RATING_COLUMNS.forEach(k => { row[k] = r[k] === undefined ? null : r[k]; });
     Object.assign(row, cleanMusic(r.musical_training, r.musical_training_years, r.musical_training_formal_years));
     RATING_FAM_COLUMNS.forEach(k => { row[k] = nonNegInt(r[k], k === 'fam_time_ms' ? MAX_MS : MAX_PLAYS); });
+    Object.assign(row, cleanChecks(r));       // participant-level, repeated on each row
     return row;
   });
 
-  const { error, savedWithout } = await insertRows(TABLE_RATING, rows, RATING_FAM_COLUMNS);
+  const { error, savedWithout } = await insertRows(TABLE_RATING, rows, CHECK_COLUMNS);
 
   if (error) {
     console.error('Supabase error (ratings):', error);
