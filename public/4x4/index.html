@@ -1133,7 +1133,7 @@
     // ── Sound check ────────────────────────────────────────────────────────────
     // One of four short clips, chosen at random. The typed digits are sent with
     // the results; nobody is held back by them.
-    const SC_CLIP = String(1 + Math.floor(Math.random() * 4));
+    const SC_CLIP = ['1', '4', '5', '6'][Math.floor(Math.random() * 4)];
     const scAudio = new Audio('soundcheck_' + SC_CLIP + '.wav');
     scAudio.preload = 'auto';
     const scInput = document.getElementById('sc-input');

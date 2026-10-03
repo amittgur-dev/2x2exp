@@ -53,7 +53,9 @@ const STIM_KEYS = ['rfrm', 'rfsm', 'sfsm', 'sfrm'];
 // The page sends neutral field names; the evaluation happens here.
 const CHECK_CORRECT = 'sounds_images';
 const CHECK_TRAP    = 'stories';
-const SOUNDCHECK_ANSWERS = { '1': '274', '2': '618', '3': '386', '4': '741' };
+// Clips 2 and 3 contained "eight", which the voice pronounced like "A"; they are
+// no longer served, and are kept here only so rows that used them stay readable.
+const SOUNDCHECK_ANSWERS = { '1': '274', '2': '618', '3': '386', '4': '741', '5': '613', '6': '362' };
 
 const CHECK_COLUMNS = [
   'ai_check', 'hidden_field_filled',
