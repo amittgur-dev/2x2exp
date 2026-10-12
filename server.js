@@ -19,6 +19,7 @@ const PROLIFIC_COMPLETION_URL_4X4 = 'https://app.prolific.com/submissions/comple
 const TABLE_2X2    = 'results';
 const TABLE_4X4    = 'results_4x4_v3';
 const TABLE_RATING = 'ratings_v3';
+const TABLE_2X2_V2 = 'results_2x2_v2';   // the new 2x2 study at /2x2/ (RFRM and SFSM only)
 
 // Closing questionnaire: accept only a boolean and a whole number of years,
 // otherwise store null rather than rejecting (and losing) the whole session.
@@ -211,21 +212,25 @@ app.post('/submit-4x4', async (req, res) => {
 // A missing/malformed code must be LOUD at boot: without it participants finish
 // the task and have no way back to Prolific. We warn rather than exit, because
 // this same process also serves the 2x2 and 4x4 studies.
-const RATING_CC = process.env.PROLIFIC_CC_RATING;
-let ratingCompletionCode = null;
-
-if (!RATING_CC) {
-  console.error('WARNING: PROLIFIC_CC_RATING is not set — /rating/ participants will NOT be redirected to Prolific.');
-} else if (!/^[A-Za-z0-9]{4,20}$/.test(RATING_CC)) {
-  console.error(`WARNING: PROLIFIC_CC_RATING looks wrong (${RATING_CC}). Set the bare completion code, not a full URL.`);
-} else {
-  ratingCompletionCode = RATING_CC;
-  console.log('Rating study completion code loaded.');
+function completionCodeFromEnv(varName, path) {
+  const cc = process.env[varName];
+  if (!cc) {
+    console.error(`WARNING: ${varName} is not set — ${path} participants will NOT be redirected to Prolific.`);
+    return null;
+  }
+  if (!/^[A-Za-z0-9]{4,20}$/.test(cc)) {
+    console.error(`WARNING: ${varName} looks wrong (${cc}). Set the bare completion code, not a full URL.`);
+    return null;
+  }
+  console.log(`${path} completion code loaded.`);
+  return cc;
 }
+const completionUrl = cc => cc ? `https://app.prolific.com/submissions/complete?cc=${cc}` : null;
 
-const PROLIFIC_COMPLETION_URL_RATING = ratingCompletionCode
-  ? `https://app.prolific.com/submissions/complete?cc=${ratingCompletionCode}`
-  : null;
+const ratingCompletionCode = completionCodeFromEnv('PROLIFIC_CC_RATING', '/rating/');
+const PROLIFIC_COMPLETION_URL_RATING = completionUrl(ratingCompletionCode);
+const cc2x2 = completionCodeFromEnv('PROLIFIC_CC_2X2', '/2x2/');
+const PROLIFIC_COMPLETION_URL_2X2 = completionUrl(cc2x2);
 
 // Explicit whitelist: never spread raw client JSON into an insert — one unexpected
 // key makes Supabase reject the whole batch and the session is lost.
@@ -278,8 +283,54 @@ app.post('/submit-ratings', async (req, res) => {
   });
 });
 
+// ── New 2x2 study (/2x2/): two images and two sounds, RFRM and SFSM ─────────
+// Same page and recording as the 4x4, reduced to two groups. Writes to its own
+// table. `congruency` keeps the old 2x2 study's label: with two of each, either
+// both pairs match ("congruent") or neither.
+const COLUMNS_2X2_PLAYS = ['plays_rfrm', 'plays_sfsm', 'confirm_plays_rfrm', 'confirm_plays_sfsm'];
+
+app.post('/submit-2x2', async (req, res) => {
+  const {
+    prolific_pid, study_id, session_id,
+    g1_image, g1_sound, g2_image, g2_sound,
+    response_time_ms, px_per_mm,
+    musical_training, musical_training_years, musical_training_formal_years
+  } = req.body;
+
+  const groups = [[g1_image, g1_sound], [g2_image, g2_sound]];
+  if (groups.some(([i, s]) => !i || !s)) {
+    return res.status(400).json({ success: false, error: 'Incomplete data' });
+  }
+  const isMatch = (img, snd) => snd === img + '_sound';
+  const matched_pairs = groups.reduce((n, [i, s]) => n + (isMatch(i, s) ? 1 : 0), 0);
+
+  const row = {
+    prolific_pid: prolific_pid || 'unknown',
+    study_id:     study_id     || 'unknown',
+    session_id:   session_id   || 'unknown',
+    timestamp:    new Date().toISOString(),
+    g1_image, g1_sound, g2_image, g2_sound,
+    matched_pairs,
+    congruency: matched_pairs === 2 ? 'congruent' : 'incongruent',
+    response_time_ms: nonNegInt(response_time_ms, MAX_MS),
+    matching_time_ms: nonNegInt(req.body.matching_time_ms, MAX_MS),
+    px_per_mm,
+    ...cleanMusic(musical_training, musical_training_years, musical_training_formal_years)
+  };
+  COLUMNS_2X2_PLAYS.forEach(k => { row[k] = nonNegInt(req.body[k], MAX_PLAYS); });
+  Object.assign(row, cleanChecks(req.body), cleanDrags(req.body));
+
+  const { error, savedWithout } = await insertRows(TABLE_2X2_V2, row, [...CHECK_COLUMNS, ...DRAG_COLUMNS]);
+  if (error) {
+    console.error('Supabase error (2x2 v2):', error);
+    return res.status(500).json({ success: false, error: 'Failed to save data',
+                                  detail: error.message, code: error.code, hint: error.hint });
+  }
+  res.json({ success: true, completion_url: PROLIFIC_COMPLETION_URL_2X2, completion_code: cc2x2, ...savedNote(savedWithout) });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Matching task running → http://localhost:${PORT}`);
-  console.log(`Tables → 2x2: ${TABLE_2X2} | 4x4: ${TABLE_4X4} | rating: ${TABLE_RATING}`);
+  console.log(`Tables → 2x2: ${TABLE_2X2} | 4x4: ${TABLE_4X4} | rating: ${TABLE_RATING} | new 2x2: ${TABLE_2X2_V2}`);
 });
