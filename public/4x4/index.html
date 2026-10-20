@@ -378,7 +378,7 @@
       <ul>
         <li><strong>Voluntary participation.</strong> Taking part is entirely voluntary. You may withdraw at any moment by closing this window.</li>
         <li><strong>Use of data.</strong> The data obtained in this session will be used for a scientific study and may be published in anonymized, aggregated form in scientific journals and presentations.</li>
-        <li><strong>Anonymity.</strong> No identifying information is collected. Your responses are stored under your Prolific identifier only, which is removed from the dataset before analysis and publication.</li>
+        <li><strong>Anonymity.</strong> No identifying information is collected. Your responses are stored under <span id="id-phrase">your Prolific identifier</span> only, which is removed from the dataset before analysis and publication.</li>
         <li><strong>Risks.</strong> There are no known risks beyond those of ordinary computer use. Please set your volume to a comfortable level.</li>
         <li><strong>Ethical approval.</strong> This study has been approved by the Ethics Committee for the Social Sciences and Humanities of the University of Antwerp (reference SHW_2026_167, 22 September 2026).</li>
         <li><strong>Contact.</strong> Questions may be addressed to Amit.Gur@uantwerpen.be.</li>
@@ -709,10 +709,26 @@
     let drag  = null;            // the item being dragged
     let startTime = null;
 
-    const urlParams       = new URLSearchParams(window.location.search);
-    const prolificPid     = urlParams.get('PROLIFIC_PID') || 'unknown';
-    const prolificStudy   = urlParams.get('STUDY_ID')     || 'unknown';
-    const prolificSession = urlParams.get('SESSION_ID')   || 'unknown';
+    // ── Participant identity ───────────────────────────────────────────────────
+    // Via Prolific the link carries PROLIFIC_PID, 4x4_ID and SESSION_ID. A link sent
+    // by e-mail carries nothing, so the page makes a participant ID itself, keeps it
+    // in this browser (a reload or a second visit reuses it) and shows it at the end
+    // instead of redirecting to Prolific. Such rows have study_id 'mail'.
+    const urlParams    = new URLSearchParams(window.location.search);
+    const VIA_PROLIFIC = !!urlParams.get('PROLIFIC_PID');
+    function ownParticipantId(key) {
+      try { const kept = localStorage.getItem(key); if (kept) return kept; } catch (e) {}
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';     // no 0/O or 1/I
+      const r = new Uint32Array(8); crypto.getRandomValues(r);
+      let id = 'M';
+      for (let i = 0; i < 8; i++) id += alphabet[r[i] % alphabet.length];
+      try { localStorage.setItem(key, id); } catch (e) {}
+      return id;
+    }
+    const prolificPid     = VIA_PROLIFIC ? urlParams.get('PROLIFIC_PID') : ownParticipantId('pid_4x4');
+    const prolificStudy   = VIA_PROLIFIC ? (urlParams.get('STUDY_ID')   || 'unknown') : 'mail';
+    const prolificSession = VIA_PROLIFIC ? (urlParams.get('SESSION_ID') || 'unknown') : 'mail-' + Date.now().toString(36);
+    if (!VIA_PROLIFIC) document.getElementById('id-phrase').textContent = 'an anonymous participant code';
 
     function showScreen(id) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -1334,15 +1350,21 @@
         });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        if (!data.success || !data.completion_url) throw new Error(data.error || 'save failed');
+        if (!data.success) throw new Error(data.error || 'save failed');
         showScreen('end-screen');
-        let secs = 5;
         const msg = document.getElementById('redirect-msg');
-        const tick = setInterval(() => {
-          secs--;
-          msg.textContent = `You will be redirected to Prolific in ${secs} second${secs !== 1 ? 's' : ''}...`;
-          if (secs <= 0) { clearInterval(tick); window.location.href = data.completion_url; }
-        }, 1000);
+        if (!VIA_PROLIFIC) {
+          msg.innerHTML = `Your participant ID is <strong>${prolificPid}</strong>. Please keep it for any questions about your participation. You can now close this window.`;
+        } else if (!data.completion_url) {
+          msg.textContent = 'Please return to Prolific to complete your submission. If you are not credited automatically, contact the researcher.';
+        } else {
+          let secs = 5;
+          const tick = setInterval(() => {
+            secs--;
+            msg.textContent = `You will be redirected to Prolific in ${secs} second${secs !== 1 ? 's' : ''}...`;
+            if (secs <= 0) { clearInterval(tick); window.location.href = data.completion_url; }
+          }, 1000);
+        }
       } catch (err) {
         console.error('submit failed:', err);
         btn.disabled = false; btn.textContent = 'Try again';
