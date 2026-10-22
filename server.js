@@ -244,6 +244,13 @@ const RATING_COLUMNS = [
 // Familiarization step (before round 1): completed plays of each sound, and its
 // duration. Participant-level, so repeated on each of the participant's 32 rows.
 const RATING_FAM_COLUMNS = [...STIM_KEYS.map(s => 'fam_plays_' + s), 'fam_time_ms'];
+// Age and gender, asked after the consent (rating study). Participant-level.
+const RATING_DEMO_COLUMNS = ['age', 'gender'];
+const GENDERS = ['male', 'female', 'non_binary', 'prefer_not_to_say'];
+function cleanDemo(r) {
+  return { age: Number.isInteger(r.age) && r.age >= 10 && r.age <= 120 ? r.age : null,
+           gender: GENDERS.includes(r.gender) ? r.gender : null };
+}
 
 app.post('/submit-ratings', async (req, res) => {
   const { ratings } = req.body;
@@ -259,11 +266,11 @@ app.post('/submit-ratings', async (req, res) => {
     RATING_COLUMNS.forEach(k => { row[k] = r[k] === undefined ? null : r[k]; });
     Object.assign(row, cleanMusic(r.musical_training, r.musical_training_years, r.musical_training_formal_years));
     RATING_FAM_COLUMNS.forEach(k => { row[k] = nonNegInt(r[k], k === 'fam_time_ms' ? MAX_MS : MAX_PLAYS); });
-    Object.assign(row, cleanChecks(r));       // participant-level, repeated on each row
+    Object.assign(row, cleanChecks(r), cleanDemo(r));   // participant-level, repeated on each row
     return row;
   });
 
-  const { error, savedWithout } = await insertRows(TABLE_RATING, rows, CHECK_COLUMNS);
+  const { error, savedWithout } = await insertRows(TABLE_RATING, rows, RATING_DEMO_COLUMNS);
 
   if (error) {
     console.error('Supabase error (ratings):', error);

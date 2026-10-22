@@ -88,7 +88,9 @@
     #submit-status.error { color: #b91c1c; }
     #submit-status.info  { color: #6b7280; }
     #retry-btn { margin-top: 12px; }
-    #questionnaire-screen .box { max-width: 640px; }
+    #questionnaire-screen .box, #demo-screen .box { max-width: 640px; }
+    #demo-gender { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; }
+    #demo-gender .q-choice { margin: 0; }
     /* ── Closing questionnaire ── */
     .q-item { border: none; margin: 0 0 20px; padding: 0; }
     .q-item legend, #music-years-wrap > label { display: block; font-weight: 600; color: #1f2937; margin-bottom: 10px; line-height: 1.5; }
@@ -157,6 +159,27 @@
       </div>
     </div>
     <button class="btn-primary" id="consent-btn" disabled>I consent — continue</button>
+  </div>
+
+  <!-- ═══ ABOUT YOU (age and gender) ═══ -->
+  <div id="demo-screen" class="screen">
+    <h1>About you</h1>
+    <div class="box">
+      <div class="q-item">
+        <label for="demo-age" style="display:block;font-weight:600;margin-bottom:10px">What is your age?</label>
+        <div class="q-years"><input type="number" id="demo-age" min="18" max="100" step="1" inputmode="numeric"> years</div>
+      </div>
+      <fieldset class="q-item">
+        <legend>What is your gender?</legend>
+        <div id="demo-gender">
+          <label class="q-choice"><input type="radio" name="demo-gender" value="male"> Male</label>
+          <label class="q-choice"><input type="radio" name="demo-gender" value="female"> Female</label>
+          <label class="q-choice"><input type="radio" name="demo-gender" value="non_binary"> Non-binary</label>
+          <label class="q-choice"><input type="radio" name="demo-gender" value="prefer_not_to_say"> Prefer not to specify</label>
+        </div>
+      </fieldset>
+    </div>
+    <button class="btn-primary" id="demo-btn" disabled>Continue</button>
   </div>
 
   <!-- ═══ INSTRUCTIONS ═══ -->
@@ -331,10 +354,9 @@ const urlParams    = new URLSearchParams(window.location.search);
 const VIA_PROLIFIC = !!urlParams.get('PROLIFIC_PID');
 function ownParticipantId(key) {
   try { const kept = localStorage.getItem(key); if (kept) return kept; } catch (e) {}
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';     // no 0/O or 1/I
   const r = new Uint32Array(8); crypto.getRandomValues(r);
-  let id = 'M';
-  for (let i = 0; i < 8; i++) id += alphabet[r[i] % alphabet.length];
+  let id = 'nonprolific-';
+  for (let i = 0; i < 8; i++) id += String(r[i] % 10);
   try { localStorage.setItem(key, id); } catch (e) {}
   return id;
 }
@@ -479,7 +501,7 @@ function saveCheckpoint() {
     localStorage.setItem(CKPT_KEY, JSON.stringify({
       pid: prolificPid, trialIndex, allRatings,
       blockOrder: BLOCK_ORDER, trials: TRIALS, pxPerMm, famRecord,
-      soundCheck, sig: signalTotals()
+      soundCheck, demoRecord, sig: signalTotals()
     }));
   } catch (e) { /* private mode / quota — non-fatal, carry on */ }
 }
@@ -506,7 +528,23 @@ window.addEventListener('beforeunload', e => {
 document.getElementById('consent-box').addEventListener('change', e =>
   document.getElementById('consent-btn').disabled = !e.target.checked);
 // Flow: consent -> instructions -> calibration -> sound check -> familiarization -> task
-document.getElementById('consent-btn').addEventListener('click', () => showScreen('start-screen'));
+document.getElementById('consent-btn').addEventListener('click', () => showScreen('demo-screen'));
+
+// ── About you: age and gender, asked right after consent ─────────────────────
+let demoRecord = null;
+function demoAnswer() {
+  const age = Number(document.getElementById('demo-age').value);
+  const g = document.querySelector('input[name="demo-gender"]:checked');
+  if (!Number.isInteger(age) || age < 18 || age > 100 || !g) return null;
+  return { age, gender: g.value };
+}
+function updateDemo() { document.getElementById('demo-btn').disabled = !demoAnswer(); }
+document.getElementById('demo-age').addEventListener('input', updateDemo);
+document.querySelectorAll('input[name="demo-gender"]').forEach(el => el.addEventListener('change', updateDemo));
+document.getElementById('demo-btn').addEventListener('click', () => {
+  demoRecord = demoAnswer(); if (!demoRecord) return;
+  showScreen('start-screen');
+});
 document.getElementById('instructions-btn').addEventListener('click', () => {
   // Best-effort: browsers only grant fullscreen from a user gesture, and the
   // participant can leave it at any time — the size gate is the real guarantee.
@@ -797,7 +835,7 @@ async function submitAll() {
   const answer = musicAnswer() || { musical_training: null,
                                   musical_training_years: null, musical_training_formal_years: null };
   const closing = finalAnswer() || { final_check: null, extra_comments: null };
-  const session = { ...answer, ...closing, ...soundCheck, ...signalRecord() };   // same on all 32 rows
+  const session = { ...answer, ...closing, ...soundCheck, ...demoRecord, ...signalRecord() };   // same on all 32 rows
   document.getElementById('q-submit-btn').style.display = 'none';
   const payload = { prolific_pid: prolificPid, study_id: prolificStudy,
                     session_id: prolificSession,
@@ -908,6 +946,7 @@ document.getElementById('retry-btn').addEventListener('click', () => {
   pxPerMm = c.pxPerMm || pxPerMm;
   famRecord = c.famRecord || null;    // familiarization is not repeated on resume
   soundCheck = c.soundCheck || null;  // nor is the sound check
+  demoRecord = c.demoRecord || null;  // nor the age and gender questions
   if (c.sig) sigBase = c.sig;
   allRatings.push(...c.allRatings);
   // Finished all 8 rounds but the save never succeeded — the most valuable case to
