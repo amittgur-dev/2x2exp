@@ -1354,7 +1354,8 @@
         showScreen('end-screen');
         const msg = document.getElementById('redirect-msg');
         if (!VIA_PROLIFIC) {
-          msg.innerHTML = `Your participant ID is <strong>${prolificPid}</strong>. Please keep it for any questions about your participation. You can now close this window.`;
+          document.querySelector('#end-screen h1').textContent = 'Thank you for participating in the experiment!';
+          document.querySelectorAll('#end-screen p').forEach(el => { el.hidden = true; });
         } else if (!data.completion_url) {
           msg.textContent = 'Please return to Prolific to complete your submission. If you are not credited automatically, contact the researcher.';
         } else {

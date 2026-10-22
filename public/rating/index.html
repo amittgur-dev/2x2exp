@@ -836,8 +836,8 @@ function finish(data) {
   showScreen('end-screen');
   const note = document.getElementById('end-note');
   if (!VIA_PROLIFIC) {
-    note.innerHTML = 'Your responses have been saved.<br>Your participant ID is <strong>' + prolificPid + '</strong>. '
-                   + 'Please keep it for any questions about your participation. You can now close this window.';
+    document.querySelector('#end-screen h1').textContent = 'Thank you for participating in the experiment!';
+    note.hidden = true;
   } else if (data.completion_url) {
     note.innerHTML = 'Your responses have been saved.<br>You will be redirected to Prolific in a moment…';
     setTimeout(() => location.href = data.completion_url, 2500);
